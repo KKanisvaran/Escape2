@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE POSTHUME — Enquête</title>
+<style>
+  :root {
+    --phosphor:      #33ff66;
+    --phosphor-dim:  #1d8f3c;
+    --phosphor-warn: #ffb347;
+    --phosphor-err:  #ff5c5c;
+    --crt-black:     #050a06;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #000; overflow: hidden; }
+
+  body {
+    font-family: "Cascadia Mono", "Fira Code", "Courier New", monospace;
+    color: var(--phosphor);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- Bandeau d'état ---------- */
+  #statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 22px;
+    background: #030704;
+    border-bottom: 1px solid rgba(51,255,102,.25);
+    font-size: 13px;
+    letter-spacing: .12em;
+    z-index: 5;
+  }
+  #statusbar .title { color: var(--phosphor-dim); }
+  #countdown {
+    color: var(--phosphor-err);
+    text-shadow: 0 0 8px rgba(255,92,92,.55);
+  }
+  #countdown.saved { color: var(--phosphor); text-shadow: 0 0 8px rgba(51,255,102,.6); }
+
+  /* ---------- Écran CRT ---------- */
+  #crt {
+    position: relative;
+    flex: 1;
+    background: radial-gradient(ellipse at center, #0a140c 0%, var(--crt-black) 78%);
+    overflow: hidden;
+  }
+  #crt::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+    background: repeating-linear-gradient(to bottom,
+      transparent 0px, transparent 2px, rgba(0,0,0,.22) 3px, rgba(0,0,0,.22) 4px);
+  }
+  #crt::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    box-shadow: inset 0 0 160px rgba(0,0,0,.85);
+  }
+
+  #terminal {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px 26px 90px;
+    font-size: clamp(12px, 1.5vw, 15px);
+    line-height: 1.55;
+    text-shadow: 0 0 6px rgba(51,255,102,.5);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .dim  { color: var(--phosphor-dim); }
+  .warn { color: var(--phosphor-warn); text-shadow: 0 0 6px rgba(255,179,71,.5); }
+  .err  { color: var(--phosphor-err);  text-shadow: 0 0 6px rgba(255,92,92,.5); }
+  .white{ color: #d8d5cc; text-shadow: none; }
+
+  /* ---------- Ligne de saisie ---------- */
+  #inputrow {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 6;
+    display: flex;
+    gap: 8px;
+    padding: 14px 26px 18px;
+    background: linear-gradient(to top, var(--crt-black) 70%, transparent);
+    font-size: clamp(12px, 1.5vw, 15px);
+  }
+  #prompt { white-space: nowrap; }
+  #cmdline {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--phosphor);
+    font: inherit;
+    text-shadow: 0 0 6px rgba(51,255,102,.5);
+    caret-color: var(--phosphor);
+  }
+
+  /* ---------- Écran de victoire ---------- */
+  #victory {
+    position: absolute; inset: 0; z-index: 10;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2em;
+    text-align: center;
+    background: rgba(3,10,5,.96);
+    padding: 6vw;
+  }
+  #victory.on { display: flex; }
+  #victory h1 {
+    font-size: clamp(22px, 4vw, 46px);
+    letter-spacing: .2em;
+    text-shadow: 0 0 18px rgba(51,255,102,.8);
+    animation: vpulse 2.4s ease-in-out infinite;
+  }
+  @keyframes vpulse { 50% { opacity: .75; } }
+  #victory p { color: var(--phosphor-dim); max-width: 46em; line-height: 1.7; }
+  #victory .quote { color: #d8d5cc; font-style: italic; }
+  #victory button {
+    margin-top: 1em;
+    background: transparent;
+    border: 1px solid var(--phosphor);
+    color: var(--phosphor);
+    font: inherit;
+    letter-spacing: .18em;
+    padding: .7em 1.6em;
+    cursor: pointer;
+  }
+  #victory button:hover, #victory button:focus-visible { background: rgba(51,255,102,.12); outline: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #victory h1 { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="statusbar">
+  <span class="title">CODE POSTHUME · FORENSIC CONSOLE · CASE #0043</span>
+  <span id="countdown">LOCKDOWN IN 71:59:58</span>
+</div>
+
+<div id="crt">
+  <div id="terminal" aria-live="polite"></div>
+
+  <div id="inputrow">
+    <span id="prompt">investigator@forensic:<span class="dim">~</span>$</span>
+    <input id="cmdline" type="text" autocomplete="off" spellcheck="false"
+           aria-label="Ligne de commande de l'enquête" autofocus>
+  </div>
+
+  <div id="victory">
+    <h1>VOLUME DÉCHIFFRÉ</h1>
+    <p class="white">PROJECT MIRACLE — recherche récupérée à 100 %.<br>Protocole d'auto-verrouillage désarmé.</p>
+    <p class="quote">« Si vous lisez ceci, c'est que je n'ai pas pu revenir. Faites-en bon usage. Ce travail
+    appartient désormais à tout le monde. — A. Thorne »</p>
+    <p>La solution du chercheur est sauvée. L'enquête est terminée.</p>
+    <button id="replay">REJOUER LA CINÉMATIQUE</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // =================================================================
+  // LE SYSTÈME DE FICHIERS D'ARIS THORNE
+  // dir  : { type:"dir", children:{...} }
+  // file : { type:"file", content:"...", bin:true si binaire }
+  // Les fichiers commençant par "." sont cachés (visibles avec ls -a)
+  // =================================================================
+  var FS = {
+    type: "dir", children: {
+      "home": { type: "dir", children: {
+        "athorne": { type: "dir", children: {
+
+          "LISEZMOI.txt": { type: "file", content:
+            "Console d'analyse — pièce à conviction n°0043.\n" +
+            "Propriétaire : THORNE, A. (décédé).\n\n" +
+            "Objectif : déchiffrer le volume /mnt/data_cache avant le\n" +
+            "verrouillage définitif du système.\n\n" +
+            "Tapez 'help' pour la liste des commandes.\n" +
+            "Tapez 'hint' si vous êtes bloqué." },
+
+          ".memo_perso.txt": { type: "file", content:
+            "Note à moi-même — au cas où ma mémoire flanche :\n\n" +
+            "J'ai coupé ma passphrase en TROIS fragments.\n" +
+            "  1. Le premier est caché dans mes souvenirs de vacances.\n" +
+            "     (une image n'est jamais seulement une image — regarde\n" +
+            "      les chaînes de caractères qu'elle contient)\n" +
+            "  2. Le deuxième dort dans les journaux du système,\n" +
+            "     encodé pour ne pas attirer l'oeil.\n" +
+            "  3. Le troisième est là où je range mes automatismes.\n\n" +
+            "Format final : fragment1-fragment2-fragment3" },
+
+          "Documents": { type: "dir", children: {
+            "brouillon_article.txt": { type: "file", content:
+              "Titre provisoire : « Une solution générale au problème de\n" +
+              "dégradation des données » — NE PAS PUBLIER AVANT VALIDATION.\n\n" +
+              "Le coeur de la démonstration est dans le volume chiffré.\n" +
+              "Tout le reste n'est que du bruit destiné aux curieux." },
+            "todo.txt": { type: "file", content:
+              "- répondre au labo\n- sauvegarder (voir scripts/)\n- SURTOUT : ne parler du projet à personne" }
+          }},
+
+          "Images": { type: "dir", children: {
+            "vacances_lac.jpg": { type: "file", bin: true, content:
+              "\u00ff\u00d8\u00ffJFIF...9f8a2c...EXIF...\n" +
+              "FRAGMENT_1: aurore\n" +
+              "...c41d...IEND" },
+            "tableau_blanc.jpg": { type: "file", bin: true, content:
+              "\u00ff\u00d8\u00ffJFIF...eq[ILLISIBLE]...la solution est plus simple\n" +
+              "qu'elle n'en a l'air...IEND" }
+          }},
+
+          "scripts": { type: "dir", children: {
+            "backup.sh": { type: "file", content:
+              "#!/bin/bash\n" +
+              "# Sauvegarde quotidienne vers le NAS\n" +
+              "# NE PAS OUBLIER — fragment final de la passphrase : 1987\n" +
+              "rsync -av --delete ~/Documents nas:/backup/athorne/" },
+            ".ancienne_cle.bak": { type: "file", content:
+              "clé révoquée le 12/03 — ne fonctionne plus.\n(bien essayé.)" }
+          }}
+        }}
+      }},
+
+      "var": { type: "dir", children: {
+        "log": { type: "dir", children: {
+          "auth.log": { type: "file", content:
+            "Mar 12 08:14:02 sshd[402]: Accepted publickey for athorne\n" +
+            "Mar 12 21:47:55 sshd[977]: Failed password for root (3 attempts)\n" +
+            "Mar 13 02:11:08 sshd[1042]: Failed password for root (12 attempts)\n" +
+            "Mar 13 02:11:31 athorne: ILS ESSAIENT D'ENTRER.\n" +
+            "Mar 13 02:12:04 athorne: note chiffrée -> RlJBR01FTlRfMjogYm9yZWFsZQ==\n" +
+            "Mar 13 02:12:19 athorne: (decode-la si tu es des nôtres)\n" +
+            "Mar 13 02:14:50 systemd: AUTO-LOCK PROTOCOL ARMED" },
+          "syslog": { type: "file", content:
+            "Mar 13 02:14:50 kernel: secure wipe scheduled (T-72h)\n" +
+            "Mar 13 02:15:12 kernel: /mnt/data_cache sealed (LUKS)" }
+        }}
+      }},
+
+      "mnt": { type: "dir", children: {
+        "data_cache": { type: "dir", locked: true, children: {
+          "PROJECT_MIRACLE.txt": { type: "file", content:
+            "== PROJECT MIRACLE — dossier maître ==\n\n" +
+            "La démonstration complète, les jeux de données et le\n" +
+            "protocole de réplication. Tout est là. Tout est vrai.\n\n" +
+            "« Si vous lisez ceci, c'est que je n'ai pas pu revenir.\n" +
+            "  Faites-en bon usage. Ce travail appartient désormais\n" +
+            "  à tout le monde. — A. Thorne »" }
+        }}
+      }}
+    }
+  };
+
+  var PASSPHRASE = "aurore-boreale-1987";
+  var HOME = ["home", "athorne"];
+
+  // =================================================================
+  var terminal  = document.getElementById("terminal");
+  var input     = document.getElementById("cmdline");
+  var promptEl  = document.getElementById("prompt");
+  var countdown = document.getElementById("countdown");
+  var victory   = document.getElementById("victory");
+
+  var cwd = HOME.slice();
+  var unlocked = false;
+  var hintLevel = 0;
+  var history = [];
+  var histIndex = -1;
+
+  // ---------- utilitaires FS ----------
+  function nodeAt(pathArr) {
+    var node = FS;
+    for (var i = 0; i < pathArr.length; i++) {
+      if (node.type !== "dir" || !node.children[pathArr[i]]) return null;
+      node = node.children[pathArr[i]];
+    }
+    return node;
+  }
+
+  function resolve(raw) {
+    if (!raw) return cwd.slice();
+    var parts, base;
+    raw = raw.replace(/\/+$/, "") || "/";
+    if (raw === "~") return HOME.slice();
+    if (raw.indexOf("~/") === 0) { base = HOME.slice(); parts = raw.slice(2).split("/"); }
+    else if (raw.charAt(0) === "/") { base = []; parts = raw.slice(1).split("/"); }
+    else { base = cwd.slice(); parts = raw.split("/"); }
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (p === "" || p === ".") continue;
+      if (p === "..") { base.pop(); continue; }
+      base.push(p);
+    }
+    return base;
+  }
+
+  function pathStr(arr) { return "/" + arr.join("/"); }
+  function inHome(arr) {
+    return arr.length >= HOME.length && arr.slice(0, HOME.length).join("/") === HOME.join("/");
+  }
+  function displayCwd() {
+    if (cwd.join("/") === HOME.join("/")) return "~";
+    if (inHome(cwd)) return "~/" + cwd.slice(HOME.length).join("/");
+    return pathStr(cwd);
+  }
+  function refreshPrompt() {
+    promptEl.innerHTML = 'investigator@forensic:<span class="dim">' + displayCwd() + '</span>$';
+  }
+
+  // ---------- affichage ----------
+  function print(txt, cls) {
+    var line = document.createElement("span");
+    line.style.display = "block";
+    if (cls) line.className = cls;
+    line.textContent = txt;
+    terminal.appendChild(line);
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+  function echoCommand(raw) {
+    print("investigator@forensic:" + displayCwd() + "$ " + raw, "dim");
+  }
+
+  // ---------- commandes ----------
+  var COMMANDS = {
+
+    help: function () {
+      print("Commandes disponibles :", "white");
+      print("  ls [-a] [chemin]     lister un répertoire (-a : fichiers cachés)");
+      print("  cd <chemin>          changer de répertoire");
+      print("  pwd                  afficher le répertoire courant");
+      print("  cat <fichier>        afficher un fichier texte");
+      print("  file <fichier>       identifier le type d'un fichier");
+      print("  strings <fichier>    extraire le texte lisible d'un binaire");
+      print("  grep <motif> <fich>  chercher un motif dans un fichier");
+      print("  decode <base64>      décoder une chaîne base64");
+      print("  unlock <passphrase>  déchiffrer /mnt/data_cache");
+      print("  hint                 obtenir un indice (progressif)");
+      print("  clear                effacer l'écran");
+    },
+
+    pwd: function () { print(pathStr(cwd)); },
+
+    ls: function (args) {
+      var showAll = false, target = null;
+      args.forEach(function (a) { if (a === "-a") showAll = true; else target = a; });
+      var path = resolve(target);
+      var node = nodeAt(path);
+      if (!node) { print("ls: " + (target || "") + " : aucun fichier ou dossier de ce type", "err"); return; }
+      if (node.locked && !unlocked) {
+        print("ls: " + pathStr(path) + " : ACCÈS REFUSÉ — volume chiffré (LUKS)", "err");
+        print("    authentification requise : unlock <passphrase>", "warn");
+        return;
+      }
+      if (node.type === "file") { print(path[path.length - 1]); return; }
+      var names = Object.keys(node.children).sort();
+      var out = [];
+      names.forEach(function (n) {
+        if (!showAll && n.charAt(0) === ".") return;
+        var child = node.children[n];
+        out.push(child.type === "dir" ? n + "/" : n);
+      });
+      if (out.length === 0) { print("(vide)", "dim"); return; }
+      print(out.join("   "));
+      if (!showAll) {
+        var hidden = names.some(function (n) { return n.charAt(0) === "."; });
+        if (hidden) print("(certains éléments ne sont pas affichés…)", "dim");
+      }
+    },
+
+    cd: function (args) {
+      if (!args[0]) { cwd = HOME.slice(); refreshPrompt(); return; }
+      var path = resolve(args[0]);
+      var node = nodeAt(path);
+      if (!node || node.type !== "dir") { print("cd: " + args[0] + " : répertoire introuvable", "err"); return; }
+      if (node.locked && !unlocked) {
+        print("cd: /mnt/data_cache : ACCÈS REFUSÉ — volume chiffré", "err");
+        print("    authentification requise : unlock <passphrase>", "warn");
+        return;
+      }
+      cwd = path;
+      refreshPrompt();
+    },
+
+    cat: function (args) {
+      if (!args[0]) { print("cat: nom de fichier manquant", "err"); return; }
+      var path = resolve(args[0]);
+      var node = nodeAt(path);
+      var parentLocked = path.join("/").indexOf("mnt/data_cache") !== -1 && !unlocked;
+      if (parentLocked) { print("cat: ACCÈS REFUSÉ — volume chiffré", "err"); return; }
+      if (!node || node.type !== "file") { print("cat: " + args[0] + " : fichier introuvable", "err"); return; }
+      if (node.bin) {
+        print("cat: " + args[0] + " : fichier binaire — contenu illisible.", "warn");
+        print("     (essayez : strings " + args[0] + ")", "dim");
+        return;
+      }
+      print(node.content, "white");
+    },
+
+    file: function (args) {
+      if (!args[0]) { print("file: nom de fichier manquant", "err"); return; }
+      var node = nodeAt(resolve(args[0]));
+      if (!node) { print("file: " + args[0] + " : introuvable", "err"); return; }
+      if (node.type === "dir") { print(args[0] + ": répertoire"); return; }
+      print(args[0] + ": " + (node.bin ? "données JPEG (binaire)" : "texte ASCII"));
+    },
+
+    strings: function (args) {
+      if (!args[0]) { print("strings: nom de fichier manquant", "err"); return; }
+      var node = nodeAt(resolve(args[0]));
+      if (!node || node.type !== "file") { print("strings: " + args[0] + " : fichier introuvable", "err"); return; }
+      var lines = node.content.split("\n").filter(function (l) {
+        return /[A-Za-zÀ-ÿ]{4,}/.test(l);
+      }).map(function (l) { return l.replace(/[^\x20-\x7EÀ-ÿ]/g, ""); });
+      if (lines.length === 0) { print("(aucune chaîne lisible)", "dim"); return; }
+      lines.forEach(function (l) { print(l, "white"); });
+    },
+
+    grep: function (args) {
+      if (args.length < 2) { print("usage : grep <motif> <fichier>", "err"); return; }
+      var node = nodeAt(resolve(args[1]));
+      if (!node || node.type !== "file") { print("grep: " + args[1] + " : fichier introuvable", "err"); return; }
+      var motif = args[0].toLowerCase();
+      var found = node.content.split("\n").filter(function (l) {
+        return l.toLowerCase().indexOf(motif) !== -1;
+      });
+      if (found.length === 0) { print("(aucune correspondance)", "dim"); return; }
+      found.forEach(function (l) { print(l, "white"); });
+    },
+
+    decode: function (args) {
+      if (!args[0]) { print("usage : decode <chaîne_base64>", "err"); return; }
+      try {
+        var decoded = decodeURIComponent(escape(atob(args[0])));
+        print(decoded, "white");
+      } catch (e) {
+        print("decode: chaîne base64 invalide", "err");
+      }
+    },
+
+    unlock: function (args) {
+      if (unlocked) { print("Le volume est déjà déchiffré.", "dim"); return; }
+      if (!args[0]) { print("usage : unlock <passphrase>", "err"); return; }
+      if (args.join(" ").trim() === PASSPHRASE) {
+        unlocked = true;
+        var dc = nodeAt(["mnt", "data_cache"]);
+        dc.locked = false;
+        print("Passphrase acceptée. Déchiffrement du volume…", "warn");
+        setTimeout(function () {
+          print("[  OK  ] LUKS volume opened: /mnt/data_cache");
+          print("[  OK  ] AUTO-LOCK PROTOCOL DISARMED");
+          countdown.textContent = "SYSTEM PRESERVED";
+          countdown.classList.add("saved");
+          setTimeout(function () { victory.classList.add("on"); }, 1400);
+        }, 900);
+      } else {
+        print("unlock: passphrase incorrecte.", "err");
+        print("        (le format attendu est fragment1-fragment2-fragment3)", "dim");
+      }
+    },
+
+    hint: function () {
+      var hints = [
+        "Un chercheur prudent laisse des notes. Certaines sont cachées :\nessayez 'ls -a' dans son dossier personnel (~).",
+        "Fragment 1 — « mes souvenirs de vacances » : allez dans ~/Images\net utilisez 'strings' sur la photo. Une image n'est jamais seulement une image.",
+        "Fragment 2 — « les journaux du système » : lisez /var/log/auth.log.\nLa ligne encodée se lit avec 'decode <chaîne>'.",
+        "Fragment 3 — « mes automatismes » : les scripts. Lisez ~/scripts/backup.sh,\nles commentaires parlent parfois trop.",
+        "Assemblez : fragment1-fragment2-fragment3, puis 'unlock <passphrase>'."
+      ];
+      print("INDICE " + (Math.min(hintLevel, hints.length - 1) + 1) + "/" + hints.length + " :", "warn");
+      print(hints[Math.min(hintLevel, hints.length - 1)], "dim");
+      hintLevel++;
+    },
+
+    whoami: function () { print("investigator (clearance: CASE #0043)"); },
+
+    clear: function () { terminal.innerHTML = ""; }
+  };
+
+  // alias
+  COMMANDS.dir = COMMANDS.ls;
+  COMMANDS.open = COMMANDS.cat;
+  COMMANDS.aide = COMMANDS.help;
+
+  function exec(raw) {
+    var trimmed = raw.trim();
+    echoCommand(raw);
+    if (!trimmed) return;
+    history.push(trimmed);
+    histIndex = history.length;
+    var parts = trimmed.split(/\s+/);
+    var cmd = parts.shift().toLowerCase();
+    if (COMMANDS[cmd]) COMMANDS[cmd](parts);
+    else {
+      print(cmd + " : commande introuvable", "err");
+      print("Tapez 'help' pour la liste des commandes.", "dim");
+    }
+  }
+
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      exec(input.value);
+      input.value = "";
+    } else if (e.key === "ArrowUp") {
+      if (histIndex > 0) { histIndex--; input.value = history[histIndex]; }
+      e.preventDefault();
+    } else if (e.key === "ArrowDown") {
+      if (histIndex < history.length - 1) { histIndex++; input.value = history[histIndex]; }
+      else { histIndex = history.length; input.value = ""; }
+      e.preventDefault();
+    }
+  });
+
+  document.getElementById("crt").addEventListener("click", function () { input.focus(); });
+  document.getElementById("replay").addEventListener("click", function () {
+    window.location.href = "cinematique.html";
+  });
+
+  // ---------- compte à rebours (72h, cosmétique et persistant à l'écran) ----------
+  var remaining = 71 * 3600 + 59 * 60 + 58;
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  setInterval(function () {
+    if (unlocked) return;
+    var h = Math.floor(remaining / 3600),
+        m = Math.floor((remaining % 3600) / 60),
+        s = remaining % 60;
+    countdown.textContent = "LOCKDOWN IN " + pad(h) + ":" + pad(m) + ":" + pad(s);
+    if (remaining > 0) remaining--;
+  }, 1000);
+
+  // ---------- accueil ----------
+  print("CODE POSTHUME — SYSTEM DECRYPTOR PROMPT v3.1.2", "dim");
+  print("Session ouverte : investigator @ pièce à conviction n°0043", "dim");
+  print("");
+  print("Le propriétaire de cette machine est mort. Sa recherche — la", "white");
+  print("« solution miracle » — est enfermée dans /mnt/data_cache.", "white");
+  print("Le système s'auto-verrouillera définitivement à la fin du compte à rebours.", "white");
+  print("");
+  print("Commencez par lire ses fichiers : cat LISEZMOI.txt", "warn");
+  print("");
+  refreshPrompt();
+  input.focus();
+})();
+</script>
+
+</body>
+</html>

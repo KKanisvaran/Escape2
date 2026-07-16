@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE POSTHUME // system_entry</title>
+<style>
+  :root {
+    --phosphor:      #33ff66;
+    --phosphor-dim:  #1d8f3c;
+    --phosphor-warn: #ffb347;
+    --phosphor-err:  #ff5c5c;
+    --crt-black:     #050a06;
+    --scanline:      rgba(0, 0, 0, 0.22);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: "Cascadia Mono", "Fira Code", "Courier New", monospace;
+    color: var(--phosphor);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---------- L'écran CRT ---------- */
+  #crt {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, #0a140c 0%, var(--crt-black) 75%);
+    padding: clamp(16px, 4vw, 56px);
+    overflow: hidden;
+  }
+
+  /* Scanlines + vignette, en overlay au-dessus du texte */
+  #crt::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(to bottom,
+        transparent 0px, transparent 2px,
+        var(--scanline) 3px, var(--scanline) 4px);
+    z-index: 3;
+  }
+  #crt::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 180px rgba(0, 0, 0, 0.85);
+    z-index: 4;
+  }
+
+  /* Léger tremblement lumineux du phosphore */
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    92%      { opacity: 1; }
+    93%      { opacity: 0.86; }
+    94%      { opacity: 1; }
+  }
+  #terminal { animation: flicker 6s infinite; }
+
+  #terminal {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    overflow-y: auto;
+    font-size: clamp(12px, 1.6vw, 16px);
+    line-height: 1.55;
+    text-shadow: 0 0 6px rgba(51, 255, 102, 0.55);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .line        { display: block; }
+  .ok    .tag  { color: var(--phosphor); }
+  .warn  .tag  { color: var(--phosphor-warn); text-shadow: 0 0 6px rgba(255,179,71,.5); }
+  .err   .tag  { color: var(--phosphor-err);  text-shadow: 0 0 6px rgba(255,92,92,.5); }
+  .dim         { color: var(--phosphor-dim); }
+
+  /* ---------- L'invite finale ---------- */
+  #prompt-row {
+    display: none;
+    margin-top: 1.4em;
+    font-size: 1.15em;
+  }
+  #prompt-row.visible { display: block; }
+
+  .cursor {
+    display: inline-block;
+    width: 0.62em;
+    height: 1.05em;
+    background: var(--phosphor);
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    box-shadow: 0 0 8px rgba(51, 255, 102, 0.8);
+    animation: blink 1.06s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #lockdown {
+    display: none;
+    margin-top: 1.1em;
+    color: var(--phosphor-err);
+    text-shadow: 0 0 8px rgba(255, 92, 92, 0.6);
+    letter-spacing: 0.08em;
+  }
+  #lockdown.visible { display: block; }
+
+  #hint {
+    display: none;
+    margin-top: 2.2em;
+    color: var(--phosphor-dim);
+    font-size: 0.82em;
+    letter-spacing: 0.12em;
+    animation: hintPulse 2.4s ease-in-out infinite;
+  }
+  #hint.visible { display: block; }
+  @keyframes hintPulse { 50% { opacity: 0.35; } }
+
+  /* Bouton invisible mais focusable : accessibilité clavier/écran tactile */
+  #launch {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: transparent;
+  }
+  #launch:focus-visible {
+    outline: 2px solid var(--phosphor);
+    outline-offset: -6px;
+  }
+
+  /* ---------- Transition vers le jeu : effondrement CRT ---------- */
+  @keyframes crtCollapse {
+    0%   { transform: scaleY(1);     filter: brightness(1); }
+    55%  { transform: scaleY(0.006); filter: brightness(3.2); }
+    80%  { transform: scaleY(0.006) scaleX(0.9); filter: brightness(6); }
+    100% { transform: scaleY(0)     scaleX(0);   filter: brightness(0); }
+  }
+  #crt.shutdown {
+    animation: crtCollapse 0.65s cubic-bezier(.7,0,.84,0) forwards;
+    transform-origin: center center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #terminal        { animation: none; }
+    .cursor          { animation: none; }
+    #hint            { animation: none; }
+    #crt.shutdown    { animation: none; opacity: 0; transition: opacity .4s; }
+  }
+</style>
+</head>
+<body>
+
+<div id="crt">
+  <div id="terminal" aria-live="polite"></div>
+
+  <button id="launch" aria-label="Lancer l'enquête : exécuter ./init_investigation">
+    Lancer l'enquête
+  </button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var terminal  = document.getElementById("terminal");
+  var crt       = document.getElementById("crt");
+  var launchBtn = document.getElementById("launch");
+
+  // ---------------------------------------------------------------
+  // CONFIG : URL du système de fichiers (le jeu).
+  // Remplacez par le chemin réel de votre scène de jeu.
+  // ---------------------------------------------------------------
+  var GAME_URL = "game.html";
+
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------------------------------------------------------------
+  // La séquence de boot : chaque ligne raconte déjà l'histoire.
+  // type: ok | warn | err | raw | pause
+  // ---------------------------------------------------------------
+  var BOOT_LOG = [
+    { t: "raw",  txt: "CODE POSTHUME — SYSTEM DECRYPTOR PROMPT v3.1.2" },
+    { t: "raw",  txt: "(c) DIGITAL FORENSICS — UNIT 7" },
+    { t: "raw",  txt: "" },
+    { t: "ok",   txt: "Initializing kernel modules" },
+    { t: "ok",   txt: "Probing storage controllers" },
+    { t: "ok",   txt: "Device found: SSD 512GB — physical damage detected" },
+    { t: "warn", txt: "S.M.A.R.T. status: DEGRADED (impact trauma, sector loss 26%)" },
+    { t: "ok",   txt: "Mounting /mnt/data_cache" },
+    { t: "warn", txt: "Encrypted volume detected — LUKS header partially recovered" },
+    { t: "err",  txt: "Owner keyring unavailable: THORNE, A. — status: DECEASED" },
+    { t: "warn", txt: "Research vault located: PROJECT MIRACLE — contents unread" },
+    { t: "err",  txt: "AUTO-LOCK PROTOCOL ARMED — secure wipe scheduled by owner" },
+    { t: "ok",   txt: "Loading pentest protocol… clearance granted [CASE #0043]" },
+    { t: "ok",   txt: "Attaching investigator console" },
+    { t: "raw",  txt: "" },
+    { t: "raw",  txt: "Authentication required. Volume integrity: 74%." },
+    { t: "raw",  txt: "He took the answer with him. The machine will follow." },
+    { t: "raw",  txt: "" }
+  ];
+
+  var TAGS = { ok: "[  OK  ]", warn: "[ WARN ]", err: "[ FAIL ]" };
+
+  function addLine(entry) {
+    var line = document.createElement("span");
+    line.className = "line " + (entry.t === "raw" ? "dim" : entry.t);
+    if (entry.t === "raw") {
+      line.textContent = entry.txt;
+    } else {
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = TAGS[entry.t] + " ";
+      line.appendChild(tag);
+      line.appendChild(document.createTextNode(entry.txt));
+    }
+    terminal.appendChild(line);
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  // ---------------------------------------------------------------
+  // Invite finale : root@system_entry:~$ ./init_investigation ▌
+  // ---------------------------------------------------------------
+  var promptRow = document.createElement("div");
+  promptRow.id = "prompt-row";
+  promptRow.innerHTML =
+    '<span class="dim">root@system_entry</span>:<span class="dim">~</span>$ ' +
+    '<span id="cmd"></span><span class="cursor" aria-hidden="true"></span>';
+
+  var hint = document.createElement("div");
+  hint.id = "hint";
+  hint.textContent = "[ APPUYEZ SUR ENTRÉE POUR EXÉCUTER ]";
+
+  // Compte à rebours diégétique : le système se verrouillera définitivement.
+  // 72 h par défaut — synchronisez cette valeur avec le timer du jeu.
+  var LOCKDOWN_SECONDS = 72 * 3600;
+  var lockdown = document.createElement("div");
+  lockdown.id = "lockdown";
+
+  function formatCountdown(s) {
+    var h = Math.floor(s / 3600),
+        m = Math.floor((s % 3600) / 60),
+        sec = s % 60;
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    return pad(h) + ":" + pad(m) + ":" + pad(sec);
+  }
+
+  function startLockdownClock() {
+    var remaining = LOCKDOWN_SECONDS;
+    function tick() {
+      lockdown.textContent = "SYSTEM LOCKDOWN IN " + formatCountdown(remaining);
+      if (remaining > 0) remaining--;
+    }
+    tick();
+    setInterval(tick, 1000);
+    lockdown.classList.add("visible");
+  }
+
+  var COMMAND = "./init_investigation";
+  var ready = false;
+
+  function typeCommand(done) {
+    var cmd = document.getElementById("cmd");
+    var i = 0;
+    if (reducedMotion) { cmd.textContent = COMMAND; done(); return; }
+    (function step() {
+      if (i < COMMAND.length) {
+        cmd.textContent += COMMAND.charAt(i++);
+        setTimeout(step, 55 + Math.random() * 70);
+      } else { done(); }
+    })();
+  }
+
+  function showPrompt() {
+    terminal.appendChild(lockdown);
+    terminal.appendChild(promptRow);
+    terminal.appendChild(hint);
+    startLockdownClock();
+    promptRow.classList.add("visible");
+    terminal.scrollTop = terminal.scrollHeight;
+    typeCommand(function () {
+      hint.classList.add("visible");
+      ready = true;
+      launchBtn.focus({ preventScroll: true });
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Déroulé du boot (une touche pressée pendant le log = skip)
+  // ---------------------------------------------------------------
+  var bootIndex = 0;
+  var bootTimer = null;
+  var booting = true;
+
+  function nextBootLine() {
+    if (bootIndex >= BOOT_LOG.length) { booting = false; showPrompt(); return; }
+    addLine(BOOT_LOG[bootIndex++]);
+    var delay = reducedMotion ? 20 : 90 + Math.random() * 260;
+    bootTimer = setTimeout(nextBootLine, delay);
+  }
+
+  function skipBoot() {
+    clearTimeout(bootTimer);
+    while (bootIndex < BOOT_LOG.length) addLine(BOOT_LOG[bootIndex++]);
+    booting = false;
+    showPrompt();
+  }
+
+  // ---------------------------------------------------------------
+  // Lancement : Entrée (ou clic) → effondrement CRT → le jeu
+  // ---------------------------------------------------------------
+  function launchGame() {
+    if (!ready) return;
+    ready = false;
+    hint.textContent = "[ EXECUTING… ]";
+
+    // La commande "se valide" : le curseur s'arrête, une ligne répond.
+    addLine({ t: "ok", txt: "init_investigation: session opened — good luck, investigator." });
+
+    setTimeout(function () {
+      crt.classList.add("shutdown");
+      var delay = reducedMotion ? 450 : 700;
+      setTimeout(function () { window.location.href = GAME_URL; }, delay);
+    }, reducedMotion ? 200 : 550);
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (booting) { skipBoot(); return; }
+    if (e.key === "Enter") launchGame();
+  });
+
+  launchBtn.addEventListener("click", function () {
+    if (booting) { skipBoot(); return; }
+    launchGame();
+  });
+
+  // Go.
+  nextBootLine();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE POSTHUME — Cinématique</title>
+<style>
+  :root {
+    --phosphor:  #33ff66;
+    --alert-red: #ff4040;
+    --paper:     #e8e6e0;
+    --c-a: #33ff66;   /* Aris (protagoniste)      -> vert phosphore  */
+    --c-b: #4fc3f7;   /* Agent forensique 1        -> bleu cyan      */
+    --c-c: #ffb74d;   /* Agent forensique 2        -> ambre          */
+    --c-d: #c792ea;   /* La responsable Division 7 -> violet         */
+    --c-e: #ff6fa5;   /* Agent forensique 3        -> rose           */
+    --c-f: #9aa5b1;   /* La personne mystérieuse   -> gris acier     */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #000; overflow: hidden; }
+
+  body {
+    font-family: "Cascadia Mono", "Fira Code", "Courier New", monospace;
+    color: var(--paper);
+  }
+
+  #stage { position: relative; width: 100%; height: 100%; }
+
+  /* ---------- Couches d'image ---------- */
+  .shot {
+    position: absolute; inset: 0; opacity: 0;
+    transition: opacity 1.1s ease;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .shot.on { opacity: 1; }
+  .shot.hardcut { transition: none; }
+
+  .shot img { width: 100%; height: 100%; object-fit: cover; }
+
+  .shot.kb img { animation: kenburns 14s ease-out forwards; }
+  @keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.09); } }
+  .shot.kb-reverse img { animation: kenburnsOut 14s ease-out forwards; }
+  @keyframes kenburnsOut { from { transform: scale(1.09); } to { transform: scale(1); } }
+  .shot.kb-fast img { animation: kenburnsFast 6s ease-out forwards; }
+  @keyframes kenburnsFast { from { transform: scale(1); } to { transform: scale(1.15); } }
+  .shot.shake img { animation: shake .5s ease-in-out infinite; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    25% { transform: translate(-6px,3px) scale(1.04); }
+    50% { transform: translate(5px,-4px) scale(1.04); }
+    75% { transform: translate(-4px,-2px) scale(1.04); }
+  }
+
+  .shot .placeholder {
+    width: 100%; height: 100%; display: flex; flex-direction: column; gap: .8em;
+    align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, #16211a 0%, #05080a 80%);
+    color: #4a6a55; letter-spacing: .15em; text-align: center; padding: 2em;
+  }
+  .shot .placeholder .big { font-size: clamp(18px, 3vw, 34px); color: #6f9a80; }
+  .shot .placeholder .small { font-size: clamp(10px, 1.2vw, 14px); }
+
+  /* ---------- Cartons texte plein écran ---------- */
+  #card {
+    position: absolute; inset: 0; display: flex; flex-direction: column; gap: .6em;
+    align-items: center; justify-content: center; text-align: center; padding: 0 8vw;
+    opacity: 0; transition: opacity .9s ease; z-index: 10; pointer-events: none;
+    text-shadow: 0 2px 18px rgba(0,0,0,.9);
+  }
+  #card.on { opacity: 1; }
+  #card .main { font-size: clamp(22px, 4.5vw, 54px); font-weight: 700; letter-spacing: .14em; }
+  #card .sub { font-size: clamp(12px, 1.6vw, 18px); letter-spacing: .28em; color: #b9b6ad; }
+  #card.phosphor .main, #card.phosphor .sub { color: var(--phosphor); text-shadow: 0 0 12px rgba(51,255,102,.6); }
+  #card.red .main { color: var(--alert-red); text-shadow: 0 0 16px rgba(255,64,64,.6); }
+  #card.violet .main { color: var(--c-d); text-shadow: 0 0 16px rgba(199,146,234,.6); }
+
+  #card .stamp {
+    display: inline-block; color: var(--alert-red); border: .14em solid var(--alert-red);
+    padding: .15em .5em; font-size: clamp(26px, 6vw, 72px); font-weight: 800; letter-spacing: .2em;
+    transform: rotate(-8deg) scale(1);
+    box-shadow: 0 0 22px rgba(255,64,64,.35), inset 0 0 22px rgba(255,64,64,.2);
+    animation: stampIn .28s cubic-bezier(.2,2.4,.4,1) both;
+  }
+  @keyframes stampIn { from { transform: rotate(-8deg) scale(2.6); opacity: 0; } to { transform: rotate(-8deg) scale(1); opacity: 1; } }
+
+  /* ---------- Bulles de dialogue positionnées sur l'image ---------- */
+  #bubbles {
+    position: absolute; inset: 0; z-index: 12; pointer-events: none;
+  }
+  .speech {
+    position: absolute;
+    max-width: 34vw;
+    background: #f2f2f5;
+    color: #111;
+    font-weight: 700;
+    font-size: clamp(12px, 1.5vw, 18px);
+    letter-spacing: .01em;
+    line-height: 1.25;
+    padding: .55em .8em;
+    border-radius: .7em .7em .7em .12em;
+    box-shadow: 0 8px 30px rgba(0,0,0,.6);
+    opacity: 0;
+    transform: translateY(8px) scale(.94);
+    transition: opacity .35s ease, transform .35s ease;
+    border-left: 6px solid var(--c-a);
+  }
+  .speech.on { opacity: 1; transform: translateY(0) scale(1); }
+  .speech.b { border-left-color: var(--c-b); }
+  .speech.c { border-left-color: var(--c-c); }
+  .speech.d { border-left-color: var(--c-d); }
+  .speech.e { border-left-color: var(--c-e); }
+  .speech.f { border-left-color: var(--c-f); }
+  .speech::after {
+    content: ""; position: absolute; left: 14px; bottom: -9px;
+    border-width: 9px 9px 0 0; border-style: solid;
+    border-color: #f2f2f5 transparent transparent transparent;
+  }
+
+  /* Bulle géante style "message" (le déclencheur) */
+  #card .bubble {
+    background: #f2f2f5; color: #111; font-weight: 700;
+    font-size: clamp(18px, 3.4vw, 40px); letter-spacing: .06em;
+    padding: .55em .9em; border-radius: .5em .5em .5em .12em;
+    box-shadow: 0 8px 40px rgba(0,0,0,.65);
+  }
+
+  /* ---------- Effets globaux ---------- */
+  #whiteflash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 20; }
+  #whiteflash.hit { opacity: 1; transition: none; }
+  #whiteflash.fade { opacity: 0; transition: opacity .15s; }
+
+  #blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 19; transition: opacity .2s; }
+  #blackout.on { opacity: 1; }
+
+  #stage::before, #stage::after { content: ""; position: absolute; left: 0; right: 0; height: 7vh; background: #000; z-index: 15; }
+  #stage::before { top: 0; }
+  #stage::after  { bottom: 0; }
+
+  #skip {
+    position: absolute; right: 2.2vw; bottom: 9vh; z-index: 30;
+    background: transparent; border: 1px solid rgba(232,230,224,.35);
+    color: rgba(232,230,224,.65); font: inherit; font-size: 12px; letter-spacing: .2em;
+    padding: .5em 1.1em; cursor: pointer;
+  }
+  #skip:hover, #skip:focus-visible { border-color: var(--paper); color: var(--paper); outline: none; }
+
+  #mute {
+    position: absolute; left: 2.2vw; bottom: 9vh; z-index: 30;
+    background: transparent; border: 1px solid rgba(232,230,224,.35);
+    color: rgba(232,230,224,.65); font: inherit; font-size: 12px; letter-spacing: .2em;
+    padding: .5em 1.1em; cursor: pointer;
+  }
+  #mute:hover, #mute:focus-visible { border-color: var(--paper); color: var(--paper); outline: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shot, #card, .speech { transition: opacity .2s; }
+    .shot.kb img, .shot.kb-reverse img, .shot.kb-fast img, .shot.shake img, #card .stamp { animation: none; }
+  }
+
+  /* ---------- Couche d'effets procéduraux (sans images supplémentaires) ---------- */
+  #fx { position: absolute; inset: 0; z-index: 11; pointer-events: none; overflow: hidden; }
+  #fx canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  .fx-siren {
+    position: absolute; inset: 0; mix-blend-mode: screen; opacity: 0;
+    background: radial-gradient(circle at 15% 50%, rgba(255,40,40,.55), transparent 55%),
+                radial-gradient(circle at 85% 50%, rgba(40,90,255,.55), transparent 55%);
+    animation: sirenSweep 1.1s steps(2) infinite;
+  }
+  @keyframes sirenSweep {
+    0%   { opacity: .0; }
+    25%  { opacity: .55; }
+    50%  { opacity: .05; }
+    75%  { opacity: .5; }
+    100% { opacity: .0; }
+  }
+
+  .fx-scan {
+    position: absolute; inset: 0; opacity: .18;
+    background: repeating-linear-gradient(0deg, rgba(51,255,102,.5) 0px, rgba(51,255,102,.5) 1px, transparent 2px, transparent 4px);
+    animation: scanDrift 5s linear infinite;
+  }
+  @keyframes scanDrift { from { background-position-y: 0; } to { background-position-y: 200px; } }
+
+  .fx-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 42% 55%, rgba(150,220,255,.25), transparent 60%);
+    animation: glowPulse 2.6s ease-in-out infinite;
+  }
+  @keyframes glowPulse { 0%,100% { opacity: .35; } 50% { opacity: .8; } }
+
+  .fx-holo {
+    position: absolute; inset: 0; opacity: .5; mix-blend-mode: screen;
+    background: repeating-linear-gradient(90deg, rgba(120,200,255,.06) 0px, transparent 3px, transparent 6px);
+    animation: holoFlicker 3.4s steps(12) infinite;
+  }
+  @keyframes holoFlicker { 0%,100% { opacity: .5; } 8% { opacity: .15; } 9% { opacity: .55; } 40% { opacity: .45; } 41% { opacity: .1; } }
+
+  .fx-shards {
+    position: absolute; inset: 0; opacity: 0;
+    background:
+      linear-gradient(115deg, transparent 48%, rgba(255,255,255,.55) 49%, transparent 51%),
+      linear-gradient(25deg,  transparent 60%, rgba(255,255,255,.4) 61%, transparent 63%),
+      linear-gradient(160deg, transparent 30%, rgba(255,255,255,.35) 31%, transparent 33%);
+    animation: shardFlash .55s ease-out both;
+  }
+  @keyframes shardFlash { 0% { opacity: 0; } 15% { opacity: .9; } 100% { opacity: .15; } }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="card"></div>
+  <div id="fx"></div>
+  <div id="bubbles"></div>
+  <div id="blackout"></div>
+  <div id="whiteflash"></div>
+  <button id="mute">🔊 SON</button>
+  <button id="skip">PASSER ▸▸</button>
+</div>
+
+<!--
+  =====================================================================
+  PISTES AUDIO ATTENDUES (à déposer dans le dossier audio/ à côté de
+  ce fichier). Si un fichier est absent, il est simplement ignoré :
+  la cinématique reste jouable sans musique.
+
+  audio/act1_calme.mp3      -> ambiance douce, lofi/piano, boucle       (SÉQ 1-2 : le calme)
+  audio/act2_tension.mp3    -> nappe tendue, pulse sourd qui monte      (SÉQ 3 : le déclencheur / la fuite)
+  audio/act3_course.mp3     -> percussions rapides, cordes staccato     (SÉQ 4 : la course de nuit)
+  audio/impact.mp3          -> un seul coup sec + bruit de verre        (SÉQ 5 : le crash, joué une fois)
+  audio/act4_glas.mp3       -> drone grave, très sombre, quasi silence  (SÉQ 6 : le constat / DECEASED)
+  audio/act5_lab.mp3        -> synthé froid, clics, ambiance labo       (SÉQ 7-8 : saisie / forensique)
+  audio/act6_division7.mp3  -> thème "opérations clandestines", grave et martial, boucle (SÉQ 9 : Division 7)
+  =====================================================================
+-->
+<audio id="a-calme"     src="media/audio/act1_calme.mp3"     loop preload="none"></audio>
+<audio id="a-tension"   src="media/audio/act2_tension.mp3"   loop preload="none"></audio>
+<audio id="a-course"    src="media/audio/act3_course.mp3"    loop preload="none"></audio>
+<audio id="a-impact"    src="media/audio/impact.mp3"                preload="none"></audio>
+<audio id="a-glas"      src="media/audio/act4_glas.mp3"      loop preload="none"></audio>
+<audio id="a-lab"       src="media/audio/act5_lab.mp3"       loop preload="none"></audio>
+<audio id="a-division7" src="media/audio/act6_division7.mp3" loop preload="none"></audio>
+
+<!-- Bruitages ponctuels et ambiances (media/sound/) -->
+<audio id="s-notif"      src="media/sound/notif_tel.mp3"                preload="none"></audio>
+<audio id="s-zip"        src="media/sound/fermeture_éclair.mp3"         preload="none"></audio>
+<audio id="s-footsteps"  src="media/sound/pas_sous_la_pluie.mp3"  loop preload="none"></audio>
+<audio id="s-klaxon"     src="media/sound/klaxon.mp3"                   preload="none"></audio>
+<audio id="s-glass"      src="media/sound/verre_brisé.mp3"              preload="none"></audio>
+<audio id="s-siren"      src="media/sound/police_sirene.mp3"      loop preload="none"></audio>
+<audio id="s-keyboard"   src="media/sound/clavier.mp3"            loop preload="none"></audio>
+<audio id="s-radar"      src="media/sound/bip_radar.mp3"                preload="none"></audio>
+<audio id="s-server"     src="media/sound/ambiance_serveur.mp3"   loop preload="none"></audio>
+
+<script>
+(function () {
+  "use strict";
+
+  var MENU_URL = "menu_boot_terminal.html";
+  var ASSETS = "assets/";
+
+  // -------------------------------------------------------------
+  // TIMELINE — suit l'ordre exact des 18 images fournies.
+  // bubbles: [{cls:"a|b|c|d", text:"...", top:"%", left:"%", typed:bool}]
+  // music: id de la balise <audio> à lancer sur ce pas (fondu géré en JS)
+  // -------------------------------------------------------------
+  var TIMELINE = [
+    // === ACTE I — LE CALME ==============================================
+    { dur: 6600, img: "img1.png", kb: "kb",  music: "a-calme", fx: ["dust"],
+      label: "Matin doré, il s'étire avec son café",
+      bubbles: [
+        { cls: "a", top: "10%", left: "48%", delay: 300,  hold: 1700, text: "♪ Mmh, mh-mh, mh~ ♪" },
+        { cls: "a", top: "10%", left: "48%", delay: 2100, hold: 1900, text: "Encore une matinée tranquille." },
+        { cls: "a", top: "10%", left: "48%", delay: 4200, hold: 2200, text: "Café, code, silence. Exactement comme je l'aime." }
+      ] },
+    { dur: 9000, img: "img2.png", kb: "kb-reverse", fx: ["dust"],
+      label: "Il code, souriant, lumière chaude",
+      bubbles: [
+        { cls: "a", top: "18%", left: "48%", delay: 300,  hold: 1700, text: "♪ Ti-ti-doo, ti-doo~ ♪" },
+        { cls: "a", top: "18%", left: "48%", delay: 2100, hold: 1900, text: "Encore une belle journée…" },
+        { cls: "a", top: "18%", left: "48%", delay: 4200, hold: 2100, text: "Un petit commit, et je vais me faire un café." },
+        { cls: "a", top: "18%", left: "48%", delay: 6500, hold: 2200, text: "Personne ne sait ce que je fais vraiment ici." }
+      ] },
+    { dur: 2600, img: "img3.gif", cut: true, label: "Carton : A FEW HOURS LATER..." },
+    { dur: 7200, img: "img4.png", kb: "kb", cut: true, fx: ["glow"],
+      label: "Le soir, détendu devant l'écran",
+      bubbles: [
+        { cls: "a", top: "18%", left: "38%", delay: 500,  hold: 1900, text: "Tiens… le virement est passé." },
+        { cls: "a", top: "18%", left: "38%", delay: 2600, hold: 1900, text: "Ni vu ni connu." },
+        { cls: "a", top: "18%", left: "38%", delay: 4700, hold: 2200, text: "Je devrais peut-être arrêter bientôt." }
+      ] },
+    { dur: 2600, img: "img5.gif", cut: true, label: "Carton : A FEW MOMENTS LATER..." },
+
+    // === ACTE II — LE DÉCLENCHEUR & LA FUITE ============================
+    { dur: 4400, img: "img6.png", kb: "kb-fast", cut: true, music: "a-tension", fx: ["glow"],
+      sfx: [ { id: "s-notif", delay: 150 } ],
+      label: "Le téléphone s'allume : THEY KNOW. LEAVE NOW.",
+      bubbles: [ { cls: "a", top: "14%", left: "8%", delay: 2600, hold: 1600, text: "Merde." } ] },
+    { dur: 7200, img: "img7.png", kb: "kb-reverse", cut: true,
+      sfx: [ { id: "s-zip", delay: 5600 } ],
+      label: "Panique, il fourre l'ordinateur dans son sac",
+      bubbles: [
+        { cls: "a", top: "10%", left: "42%", delay: 300,  hold: 2100, typed: true, text: "Il faut partir. Maintenant." },
+        { cls: "a", top: "10%", left: "42%", delay: 2700, hold: 1900, text: "Le laptop. Le disque dur. Tout." },
+        { cls: "a", top: "10%", left: "42%", delay: 4900, hold: 2000, text: "Respire. Respire…" }
+      ] },
+    { dur: 6000, img: "img8.png", kb: "kb", cut: true, fx: ["rain"], ambient: "s-footsteps",
+      label: "Il court sous la pluie vers la voiture",
+      bubbles: [
+        { cls: "a", top: "12%", left: "30%", delay: 500,  hold: 1900, text: "La voiture. Juste la voiture." },
+        { cls: "a", top: "12%", left: "30%", delay: 2700, hold: 2100, text: "Vas-y, vas-y, vas-y—" }
+      ] },
+
+    // === ACTE III — LA COURSE ============================================
+    { dur: 5200, img: "img9.png", kb: "kb", cut: true, fx: ["rain"], ambient: null,
+      label: "Route de nuit, plan large, la voiture file", music: "a-course" },
+    { dur: 6600, img: "img10.png", kb: "kb-reverse", fx: ["rain"],
+      label: "Intérieur voiture, visage effrayé",
+      bubbles: [
+        { cls: "a", top: "8%",  left: "48%", delay: 400,  hold: 1900, text: "Allez… allez…" },
+        { cls: "a", top: "8%",  left: "48%", delay: 2600, hold: 2100, text: "Pourquoi il roule aussi lentement ?!" },
+        { cls: "a", top: "8%",  left: "48%", delay: 4900, hold: 1800, text: "Je dois juste… sortir de cette route." }
+      ] },
+    { dur: 5600, img: "img11.png", kb: "kb", fx: ["rain"],
+      sfx: [ { id: "s-klaxon", delay: 3900 } ],
+      label: "Vue avant, rétroviseur, regard affolé",
+      bubbles: [
+        { cls: "a", top: "6%", left: "76%", delay: 500,  hold: 2000, text: "Encore un peu. Juste encore un peu." },
+        { cls: "a", top: "6%", left: "76%", delay: 2800, hold: 1900, text: "Pourquoi il freine—" }
+      ] },
+
+    // === ACTE IV — LE CRASH ==============================================
+    { dur: 1400, img: "img12.png", kb: "shake", cut: true, fx: ["shards"],
+      label: "POV : le camion, les phares, le verre", music: "a-impact",
+      sfx: [ { id: "s-glass", delay: 90 } ],
+      bubbles: [ { cls: "a", top: "40%", left: "40%", delay: 60, hold: 950, typed: true, text: "Non, non—" } ] },
+    { dur: 160,  flash: true },
+    { dur: 2600, blackout: true },
+
+    // === ACTE V — LE CONSTAT =============================================
+    { dur: 9200, img: "img13.png", kb: "kb", cut: true, music: "a-glas", fx: ["siren"], ambient: "s-siren",
+      label: "La carcasse, police et ambulance sur place",
+      bubbles: [
+        { cls: "b", top: "10%", left: "10%", delay: 900,  hold: 2000, text: "Un survivant ?" },
+        { cls: "c", top: "10%", left: "68%", delay: 3100, hold: 2100, text: "Négatif. Un corps sur place." },
+        { cls: "b", top: "10%", left: "10%", delay: 5400, hold: 1800, text: "Heure du décès ?" },
+        { cls: "c", top: "10%", left: "68%", delay: 7400, hold: 1700, text: "Constatée à 23h47." }
+      ] },
+    { dur: 11200, img: "img14.png", kb: "kb-reverse", fx: ["siren"],
+      label: "La housse mortuaire « THORNE, A. »",
+      bubbles: [
+        { cls: "c", top: "8%",  left: "58%", delay: 700,  hold: 2200, text: "Thorne, A. Trente-deux ans." },
+        { cls: "b", top: "10%", left: "6%",  delay: 3100, hold: 2600, text: "Cause probable : collision frontale avec un poids lourd." },
+        { cls: "c", top: "8%",  left: "58%", delay: 5900, hold: 2300, text: "Chaussée mouillée, vitesse excessive. Classique." },
+        { cls: "b", top: "10%", left: "6%",  delay: 8400, hold: 2400, text: "Aucune trace de freinage avant l'impact." }
+      ] },
+    { dur: 3000, img: "img14.png", hold: true, fx: ["siren"],
+      card: { cls: "red", stamp: "DECEASED" } },
+
+    // === ACTE VI — LA SAISIE & LE LABO ===================================
+    { dur: 7500, img: "img15.png", kb: "kb", cut: true, music: "a-lab", ambient: "s-server",
+      card: { cls: "", sub: "DIGITAL FORENSICS — UNIT 7 · PIÈCE N°0043" },
+      label: "Sac, laptop et mallette posés sur la paillasse",
+      bubbles: [
+        { cls: "b", top: "12%", left: "6%",  delay: 1200, hold: 2600, text: "Inventaire : un sac à dos, un ordinateur portable, une mallette scellée." },
+        { cls: "c", top: "10%", left: "62%", delay: 4200, hold: 2400, text: "Cette mallette scellée… bizarre, pour un simple développeur." }
+      ] },
+    { dur: 4600, img: "img16.png", kb: "kb-reverse", fx: ["scan"],
+      sfx: [ { id: "s-radar", delay: 250 }, { id: "s-radar", delay: 2400 } ],
+      label: "Gros plan : ENCRYPTED VOLUME DETECTED" },
+    { dur: 38500, img: "img17.jpg", kb: "kb", cut: true, fx: ["scan"], ambient: "s-keyboard",
+      label: "L'équipe forensique découvre le contenu chiffré",
+      bubbles: [
+        { cls: "b", top: "8%",  left: "58%", delay: 300,   hold: 1900, text: "Chiffrement militaire. On n'entre pas comme ça." },
+        { cls: "c", top: "6%",  left: "26%", delay: 2300,  hold: 2000, text: "On a tout essayé : brute-force, dictionnaire, faille firmware… rien." },
+        { cls: "e", top: "10%", left: "80%", delay: 4400,  hold: 1800, text: "Même le CD de secours refuse de booter." },
+        { cls: "b", top: "8%",  left: "58%", delay: 6300,  hold: 1800, text: "Normal, c'est verrouillé au niveau du BIOS." },
+        { cls: "c", top: "6%",  left: "26%", delay: 8200,  hold: 2200, text: "Depuis quand un simple développeur a un BIOS verrouillé comme une centrale nucléaire ?" },
+        { cls: "e", top: "10%", left: "80%", delay: 10500, hold: 1900, text: "Depuis qu'il cachait visiblement un truc énorme." },
+        { cls: "b", top: "8%",  left: "58%", delay: 12500, hold: 2200, text: "Il va falloir passer par Linux. Ligne de commande. Open source, quoi." },
+        { cls: "c", top: "6%",  left: "26%", delay: 14800, hold: 1900, text: "Merci, on sait ce qu'est Linux, Dubois." },
+        { cls: "e", top: "10%", left: "80%", delay: 16800, hold: 1700, text: "Je dis ça pour ceux du fond." },
+        { cls: "b", top: "8%",  left: "58%", delay: 18600, hold: 1600, text: "Y'a pas de fond. On est trois." },
+        { cls: "e", top: "10%", left: "80%", delay: 20300, hold: 1700, text: "Je dis ça symboliquement." },
+        { cls: "c", top: "6%",  left: "26%", delay: 22100, hold: 1900, text: "Bon. On appelle l'expert du domaine." },
+        { cls: "b", top: "8%",  left: "58%", delay: 24100, hold: 2000, text: "Qui ça, « l'expert du domaine » ?" },
+        { cls: "c", top: "6%",  left: "26%", delay: 26200, hold: 2200, text: "Peu importe qui. Quelqu'un qui sait vraiment faire ça." },
+        { cls: "e", top: "10%", left: "80%", delay: 28500, hold: 2000, text: "Tant qu'il facture pas à l'heure, ça me va." },
+        { cls: "c", top: "6%",  left: "26%", delay: 30600, hold: 1900, text: "Je préviens le supérieur." },
+        { cls: "b", top: "8%",  left: "58%", delay: 32600, hold: 2000, text: "Dis-lui qu'on a essayé. Vraiment essayé." },
+        { cls: "e", top: "10%", left: "80%", delay: 34700, hold: 2400, text: "Dis-lui surtout qu'on veut du café frais après ça." }
+      ] },
+
+    // === ACTE VII — DIVISION 7 ===========================================
+    { dur: 58000, img: "img18.png", kb: "kb-reverse", cut: true, music: "a-division7", fx: ["holo"], ambient: null,
+      label: "Bureau de la Division 7 — Opérations Clandestines",
+      bubbles: [
+        { cls: "d", top: "6%",  left: "40%", delay: 300,   hold: 1900, text: "On m'a dit que vous étiez le meilleur dans votre domaine." },
+        { cls: "f", top: "62%", left: "18%", delay: 2300,  hold: 1800, text: "C'est ce qu'on raconte, oui." },
+        { cls: "d", top: "6%",  left: "40%", delay: 4200,  hold: 2800, text: "On a besoin de vous. Il a reçu un message : « Ils savent. Partez maintenant. » Il est mort dans l'heure." },
+        { cls: "f", top: "62%", left: "18%", delay: 7100,  hold: 1900, text: "Sympa, comme dernière notification." },
+        { cls: "f", top: "62%", left: "18%", delay: 9100,  hold: 2200, text: "Vous avez essayé de tracer le numéro qui a envoyé ce message ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 11400, hold: 2200, text: "Évidemment. Carte prépayée, relais anonyme. Rien d'exploitable." },
+        { cls: "f", top: "62%", left: "18%", delay: 13700, hold: 2000, text: "Je demandais juste, pour être sûr que vous aviez pensé à la base." },
+        { cls: "d", top: "6%",  left: "40%", delay: 15800, hold: 2000, text: "On y avait pensé avant même que vous arriviez." },
+        { cls: "d", top: "6%",  left: "40%", delay: 17900, hold: 2600, text: "Ce qu'on ignore, c'est pourquoi il a fui. Ce qu'il a emporté. Ce qu'il protégeait." },
+        { cls: "d", top: "6%",  left: "40%", delay: 20600, hold: 2300, text: "La réponse est peut-être dans son ordinateur. Tout est chiffré, système Linux." },
+        { cls: "f", top: "62%", left: "18%", delay: 23000, hold: 2300, text: "Donc vous voulez que je fouille là-dedans, discrètement, sans rien casser." },
+        { cls: "d", top: "6%",  left: "40%", delay: 25400, hold: 2300, text: "Exactement. Parcourez le système, l'open source, trouvez ce qu'il cachait." },
+        { cls: "f", top: "62%", left: "18%", delay: 27800, hold: 1700, text: "Et si je trouve rien ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 29600, hold: 2500, text: "Alors on saura qu'il n'y avait rien à trouver. Pour nous, c'est déjà une information." },
+        { cls: "f", top: "62%", left: "18%", delay: 32200, hold: 1900, text: "Pratique. Vous gagnez à tous les coups." },
+        { cls: "d", top: "6%",  left: "40%", delay: 34200, hold: 1900, text: "C'est le principe du renseignement, oui." },
+        { cls: "f", top: "62%", left: "18%", delay: 36200, hold: 1800, text: "Et moi je gagne quoi, dans l'histoire ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 38100, hold: 2300, text: "Le droit de tester vos exploits ailleurs qu'en cellule." },
+        { cls: "f", top: "62%", left: "18%", delay: 40500, hold: 1800, text: "Argument recevable." },
+        { cls: "d", top: "6%",  left: "40%", delay: 42400, hold: 2400, text: "On vous assigne une équipe de couverture. Nom de code : Lynx." },
+        { cls: "f", top: "62%", left: "18%", delay: 44900, hold: 2200, text: "J'ai un nom de code maintenant ? Je suis ému." },
+        { cls: "d", top: "6%",  left: "40%", delay: 47200, hold: 2600, text: "Ce n'est pas votre nom de code. C'est celui de l'équipe qui vous surveille." },
+        { cls: "f", top: "62%", left: "18%", delay: 49900, hold: 1900, text: "Ah. Beaucoup moins ému." },
+        { cls: "d", top: "6%",  left: "40%", delay: 51900, hold: 1900, text: "Alors ? Vous êtes in ou pas ?" },
+        { cls: "f", top: "62%", left: "18%", delay: 53900, hold: 2500, text: "Va pour un café correct… et j'en suis." }
+      ] },
+    { dur: 3800, card: { cls: "violet", main: "DIVISION 7", sub: "OPÉRATIONS CLANDESTINES" }, blackbg: true }
+    // → puis redirection vers le menu de boot
+  ];
+
+  // =================================================================
+  var stage      = document.getElementById("stage");
+  var card       = document.getElementById("card");
+  var fxLayer    = document.getElementById("fx");
+  var bubbleLayer= document.getElementById("bubbles");
+  var whiteflash = document.getElementById("whiteflash");
+  var blackout   = document.getElementById("blackout");
+  var skipBtn    = document.getElementById("skip");
+  var muteBtn    = document.getElementById("mute");
+
+  // ---------------- Effets procéduraux (pas d'images supplémentaires) ----------------
+  var fxRAFs = [];
+  function stopAllFx() {
+    fxRAFs.forEach(function (id) { cancelAnimationFrame(id); });
+    fxRAFs = [];
+    fxLayer.innerHTML = "";
+  }
+
+  function makeCanvasFx(kind) {
+    var c = document.createElement("canvas");
+    fxLayer.appendChild(c);
+    function resize() { c.width = c.clientWidth; c.height = c.clientHeight; }
+    resize();
+    var ctx = c.getContext("2d");
+    var particles = [];
+    var count = kind === "rain" ? 140 : 46;
+
+    for (var i = 0; i < count; i++) {
+      if (kind === "rain") {
+        particles.push({
+          x: Math.random() * c.width, y: Math.random() * c.height,
+          len: 12 + Math.random() * 18, speed: 9 + Math.random() * 7,
+          drift: 2.2 + Math.random() * .8, alpha: .18 + Math.random() * .25
+        });
+      } else { // dust
+        particles.push({
+          x: Math.random() * c.width, y: Math.random() * c.height,
+          r: 1 + Math.random() * 2.4, speed: .18 + Math.random() * .3,
+          drift: (Math.random() - .5) * .3, alpha: .15 + Math.random() * .35,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, c.width, c.height);
+      if (kind === "rain") {
+        ctx.strokeStyle = "rgba(200,220,255,1)";
+        ctx.lineWidth = 1.2;
+        particles.forEach(function (p) {
+          ctx.globalAlpha = p.alpha;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.drift * 4, p.y + p.len);
+          ctx.stroke();
+          p.y += p.speed; p.x -= p.drift;
+          if (p.y > c.height) { p.y = -p.len; p.x = Math.random() * c.width; }
+        });
+      } else {
+        ctx.fillStyle = "rgba(255,236,190,1)";
+        particles.forEach(function (p) {
+          p.phase += 0.01;
+          var wob = Math.sin(p.phase) * 6;
+          ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.phase));
+          ctx.beginPath();
+          ctx.arc(p.x + wob, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+          p.y -= p.speed;
+          if (p.y < -4) { p.y = c.height + 4; p.x = Math.random() * c.width; }
+        });
+      }
+      var id = requestAnimationFrame(draw);
+      fxRAFs.push(id);
+    }
+    draw();
+  }
+
+  function makeDivFx(cls) {
+    var d = document.createElement("div");
+    d.className = "fx-" + cls;
+    fxLayer.appendChild(d);
+  }
+
+  function applyFx(list) {
+    stopAllFx();
+    if (!list || reducedMotion) return;
+    list.forEach(function (kind) {
+      if (kind === "rain" || kind === "dust") makeCanvasFx(kind);
+      else makeDivFx(kind);
+    });
+  }
+
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var currentShot = null;
+  var currentAudioId = null;
+  var muted = false;
+  var timers = [];
+  var finished = false;
+
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+
+  function makeShot(step) {
+    var shot = document.createElement("div");
+    shot.className = "shot" + (step.kb && !reducedMotion ? " " + step.kb : "") + (step.cut ? " hardcut" : "");
+    if (step.img) {
+      var img = document.createElement("img");
+      img.src = ASSETS + step.img;
+      img.alt = "";
+      img.onerror = function () {
+        shot.removeChild(img);
+        var ph = document.createElement("div");
+        ph.className = "placeholder";
+        ph.innerHTML = '<div class="big">' + (step.label || step.img) + '</div>' +
+                       '<div class="small">image attendue : ' + ASSETS + step.img + '</div>';
+        shot.appendChild(ph);
+      };
+      shot.appendChild(img);
+    } else if (step.blackbg) {
+      shot.style.background = "#020403";
+    }
+    return shot;
+  }
+
+  function showCard(c) {
+    card.className = c.cls || "";
+    card.innerHTML = "";
+    if (c.bubble) {
+      var b = document.createElement("div");
+      b.className = "bubble";
+      card.appendChild(b);
+      if (c.typed && !reducedMotion) {
+        var i = 0, txt = c.bubble;
+        (function type() {
+          if (i <= txt.length) { b.textContent = txt.slice(0, i++); later(type, 65); }
+        })();
+      } else { b.textContent = c.bubble; }
+    }
+    if (c.stamp) {
+      var s = document.createElement("span");
+      s.className = "stamp";
+      s.textContent = c.stamp;
+      card.appendChild(s);
+    }
+    if (c.main) {
+      var m = document.createElement("div");
+      m.className = "main";
+      m.textContent = c.main;
+      card.appendChild(m);
+    }
+    if (c.sub) {
+      var su = document.createElement("div");
+      su.className = "sub";
+      su.textContent = c.sub;
+      card.appendChild(su);
+    }
+    card.classList.add("on");
+  }
+
+  function hideCard() { card.classList.remove("on"); }
+
+  function showBubbles(list) {
+    bubbleLayer.innerHTML = "";
+    if (!list) return;
+    list.forEach(function (bd, i) {
+      var el = document.createElement("div");
+      el.className = "speech " + bd.cls;
+      el.style.top = bd.top || "10%";
+      el.style.left = bd.left || "10%";
+      bubbleLayer.appendChild(el);
+
+      var delay = (bd.delay != null) ? bd.delay : (250 + i * 1600);
+      var hold  = (bd.hold  != null) ? bd.hold  : 1900;
+
+      later(function () {
+        if (bd.typed && !reducedMotion) {
+          el.classList.add("on");
+          var j = 0, txt = bd.text;
+          (function step() {
+            if (j <= txt.length) { el.textContent = txt.slice(0, j++); later(step, 26); }
+          })();
+        } else {
+          el.textContent = bd.text;
+          el.classList.add("on");
+        }
+      }, delay);
+
+      later(function () { el.classList.remove("on"); }, delay + hold);
+    });
+  }
+
+  function clearBubbles() { bubbleLayer.innerHTML = ""; }
+
+  function crossfadeAudio(nextId) {
+    if (nextId === currentAudioId) return;
+    var prev = currentAudioId ? document.getElementById(currentAudioId) : null;
+    var next = nextId ? document.getElementById(nextId) : null;
+
+    if (prev) {
+      var fadeOutStep = prev.volume / 10;
+      var fo = setInterval(function () {
+        prev.volume = Math.max(0, prev.volume - fadeOutStep);
+        if (prev.volume <= 0.01) { prev.pause(); prev.currentTime = 0; clearInterval(fo); }
+      }, 60);
+    }
+    if (next && !muted) {
+      next.volume = 0;
+      next.play().catch(function () {});
+      var vol = 0;
+      var fi = setInterval(function () {
+        vol = Math.min(0.6, vol + 0.06);
+        next.volume = vol;
+        if (vol >= 0.6) clearInterval(fi);
+      }, 60);
+    }
+    currentAudioId = nextId;
+  }
+
+  function playOneShot(id) {
+    if (muted) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.volume = 0.8;
+    el.currentTime = 0;
+    el.play().catch(function () {});
+  }
+
+  // ---- Canal secondaire pour les ambiances en boucle (sirène, clavier, pas, serveur) ----
+  var currentAmbientId = null;
+  function crossfadeAmbient(nextId) {
+    if (nextId === currentAmbientId) return;
+    var prev = currentAmbientId ? document.getElementById(currentAmbientId) : null;
+    var next = nextId ? document.getElementById(nextId) : null;
+
+    if (prev) {
+      var fadeOutStep = prev.volume / 8;
+      var fo = setInterval(function () {
+        prev.volume = Math.max(0, prev.volume - fadeOutStep);
+        if (prev.volume <= 0.01) { prev.pause(); prev.currentTime = 0; clearInterval(fo); }
+      }, 50);
+    }
+    if (next && !muted) {
+      next.volume = 0;
+      next.play().catch(function () {});
+      var vol = 0;
+      var fi = setInterval(function () {
+        vol = Math.min(0.45, vol + 0.05);
+        next.volume = vol;
+        if (vol >= 0.45) clearInterval(fi);
+      }, 50);
+    }
+    currentAmbientId = nextId;
+  }
+
+  function scheduleSfx(list) {
+    if (!list) return;
+    list.forEach(function (s) {
+      later(function () { playOneShot(s.id); }, s.delay != null ? s.delay : 0);
+    });
+  }
+
+  function runStep(index) {
+    if (finished) return;
+    if (index >= TIMELINE.length) { endCinematic(); return; }
+    var step = TIMELINE[index];
+
+    hideCard();
+    clearBubbles();
+    applyFx(step.fx);
+    blackout.classList.remove("on");
+
+    if (step.music) crossfadeAudio(step.music);
+    if (step.ambient !== undefined) crossfadeAmbient(step.ambient);
+    if (step.sfx) scheduleSfx(step.sfx);
+    if (step.impact) playOneShot(step.impact);
+    if (step.dur === 160 && step.flash) { /* impact sonore géré via TIMELINE music: a-impact au pas précédent */ }
+
+    if (step.flash) {
+      whiteflash.classList.remove("fade");
+      whiteflash.classList.add("hit");
+      later(function () { whiteflash.classList.remove("hit"); whiteflash.classList.add("fade"); }, step.dur);
+    } else if (step.blackout) {
+      if (currentShot) { currentShot.classList.remove("on"); }
+      blackout.classList.add("on");
+    } else if (!step.hold) {
+      var shot = makeShot(step);
+      stage.insertBefore(shot, card);
+      void shot.offsetWidth;
+      shot.classList.add("on");
+      if (currentShot) {
+        var old = currentShot;
+        if (step.cut) { old.classList.add("hardcut"); }
+        old.classList.remove("on");
+        later(function () { if (old.parentNode) old.parentNode.removeChild(old); }, 1400);
+      }
+      currentShot = shot;
+    }
+
+    if (step.card) later(function () { showCard(step.card); }, step.hold ? 100 : 500);
+    if (step.bubbles) later(function () { showBubbles(step.bubbles); }, 600);
+
+    later(function () { runStep(index + 1); }, step.dur);
+  }
+
+  function endCinematic() {
+    if (finished) return;
+    finished = true;
+    timers.forEach(function (t) { clearTimeout(t); clearInterval(t); });
+    stopAllFx();
+    crossfadeAudio(null);
+    crossfadeAmbient(null);
+    blackout.classList.add("on");
+    setTimeout(function () { window.location.href = MENU_URL; }, reducedMotion ? 250 : 900);
+  }
+
+  skipBtn.addEventListener("click", endCinematic);
+  muteBtn.addEventListener("click", function () {
+    muted = !muted;
+    muteBtn.textContent = muted ? "🔇 MUET" : "🔊 SON";
+    document.querySelectorAll("audio").forEach(function (a) {
+      if (muted) a.pause();
+      else if (a.id === currentAudioId || a.id === currentAmbientId) a.play().catch(function () {});
+    });
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") endCinematic(); });
+
+  runStep(0);
+})();
+</script>
+
+</body>
+</html>
