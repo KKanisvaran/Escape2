@@ -1,0 +1,22 @@
+# Réglages locaux Claude Code (propres à chaque machine)
+.claude/settings.local.json
+
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Fichiers temporaires
+*.log
+*.tmp
+*.bak
