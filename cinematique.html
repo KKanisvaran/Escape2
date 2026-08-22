@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE POSTHUME — Cinématique</title>
+<style>
+  :root {
+    --phosphor:  #33ff66;
+    --alert-red: #ff4040;
+    --paper:     #e8e6e0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #000; overflow: hidden; }
+
+  body {
+    font-family: "Cascadia Mono", "Fira Code", "Courier New", monospace;
+    color: var(--paper);
+  }
+
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---------- Couches d'image ---------- */
+  .shot {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 1.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .shot.on { opacity: 1; }
+  .shot.hardcut { transition: none; }
+
+  .shot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Ken Burns : lent zoom qui donne vie aux images fixes */
+  .shot.kb img { animation: kenburns 14s ease-out forwards; }
+  @keyframes kenburns {
+    from { transform: scale(1); }
+    to   { transform: scale(1.09); }
+  }
+  .shot.kb-reverse img { animation: kenburnsOut 14s ease-out forwards; }
+  @keyframes kenburnsOut {
+    from { transform: scale(1.09); }
+    to   { transform: scale(1); }
+  }
+
+  /* Placeholder si l'image n'est pas encore exportée dans assets/ */
+  .shot .placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8em;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #16211a 0%, #05080a 80%);
+    color: #4a6a55;
+    letter-spacing: 0.15em;
+    text-align: center;
+    padding: 2em;
+  }
+  .shot .placeholder .big { font-size: clamp(18px, 3vw, 34px); color: #6f9a80; }
+  .shot .placeholder .small { font-size: clamp(10px, 1.2vw, 14px); }
+
+  /* ---------- Cartons & textes à l'écran ---------- */
+  #card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 8vw;
+    opacity: 0;
+    transition: opacity 0.9s ease;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 2px 18px rgba(0,0,0,0.9);
+  }
+  #card.on { opacity: 1; }
+  #card .main {
+    font-size: clamp(22px, 4.5vw, 54px);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+  }
+  #card .sub {
+    font-size: clamp(12px, 1.6vw, 18px);
+    letter-spacing: 0.28em;
+    color: #b9b6ad;
+  }
+  #card.phosphor .main, #card.phosphor .sub { color: var(--phosphor); text-shadow: 0 0 12px rgba(51,255,102,.6); }
+  #card.red .main { color: var(--alert-red); text-shadow: 0 0 16px rgba(255,64,64,.6); }
+
+  /* Bulle de message (le Déclencheur) */
+  #card .bubble {
+    background: #f2f2f5;
+    color: #111;
+    font-weight: 700;
+    font-size: clamp(18px, 3.4vw, 40px);
+    letter-spacing: 0.06em;
+    padding: 0.55em 0.9em;
+    border-radius: 0.5em 0.5em 0.5em 0.12em;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.65);
+  }
+
+  /* Tampon DECEASED */
+  #card .stamp {
+    display: inline-block;
+    color: var(--alert-red);
+    border: 0.14em solid var(--alert-red);
+    padding: 0.15em 0.5em;
+    font-size: clamp(26px, 6vw, 72px);
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    transform: rotate(-8deg) scale(1);
+    box-shadow: 0 0 22px rgba(255,64,64,.35), inset 0 0 22px rgba(255,64,64,.2);
+    animation: stampIn .28s cubic-bezier(.2,2.4,.4,1) both;
+  }
+  @keyframes stampIn {
+    from { transform: rotate(-8deg) scale(2.6); opacity: 0; }
+    to   { transform: rotate(-8deg) scale(1);   opacity: 1; }
+  }
+
+  /* ---------- Effets globaux ---------- */
+  #whiteflash {
+    position: absolute; inset: 0; background: #fff;
+    opacity: 0; pointer-events: none; z-index: 20;
+  }
+  #whiteflash.hit { opacity: 1; transition: none; }
+  #whiteflash.fade { opacity: 0; transition: opacity .15s; }
+
+  #blackout {
+    position: absolute; inset: 0; background: #000;
+    opacity: 0; pointer-events: none; z-index: 19;
+    transition: opacity .2s;
+  }
+  #blackout.on { opacity: 1; }
+
+  /* Barres cinéma */
+  #stage::before, #stage::after {
+    content: ""; position: absolute; left: 0; right: 0;
+    height: 7vh; background: #000; z-index: 15;
+  }
+  #stage::before { top: 0; }
+  #stage::after  { bottom: 0; }
+
+  /* ---------- Skip ---------- */
+  #skip {
+    position: absolute;
+    right: 2.2vw; bottom: 9vh;
+    z-index: 30;
+    background: transparent;
+    border: 1px solid rgba(232,230,224,.35);
+    color: rgba(232,230,224,.65);
+    font: inherit;
+    font-size: 12px;
+    letter-spacing: .2em;
+    padding: .5em 1.1em;
+    cursor: pointer;
+  }
+  #skip:hover, #skip:focus-visible { border-color: var(--paper); color: var(--paper); outline: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shot, #card { transition: opacity .2s; }
+    .shot.kb img, .shot.kb-reverse img, #card .stamp { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="card"></div>
+  <div id="blackout"></div>
+  <div id="whiteflash"></div>
+  <button id="skip">PASSER ▸▸</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // =================================================================
+  // CONFIG
+  // Exportez vos images (recadrées depuis vos planches) dans assets/
+  // avec les noms ci-dessous. Si une image manque, un placeholder
+  // stylé s'affiche à sa place — la cinématique reste jouable.
+  // =================================================================
+  var MENU_URL = "menu_boot_terminal.html";
+  var ASSETS = "assets/";
+
+  // Chaque étape : durée (ms), image, effet, carton éventuel.
+  // Le déroulé suit le script de storyboarding à la lettre.
+  var TIMELINE = [
+    // --- SÉQ. 1 : LE CALME -------------------------------------------------
+    { dur: 3000, card: { cls: "", main: "A FEW YEARS LATER.", sub: "" } },
+    { dur: 7000, img: "01_calme.png",       kb: "kb",         label: "SÉQ.1 — LE CALME · Aris travaille, lumière dorée" },
+
+    // --- SÉQ. 2 : LE DÉCLENCHEUR --------------------------------------------
+    { dur: 2500, img: "02_declencheur.png", kb: "kb",  cut: true, label: "SÉQ.2 — LE DÉCLENCHEUR · gros plan téléphone" },
+    { dur: 4500, img: "02_declencheur.png", hold: true,
+      card: { cls: "", bubble: "THEY KNOW. LEAVE NOW.", typed: true } },
+
+    // --- SÉQ. 3 : LA FUITE ---------------------------------------------------
+    { dur: 5500, img: "03_panique.png",     kb: "kb-reverse", cut: true, label: "SÉQ.3 — LA FUITE · il range tout, panique" },
+
+    // --- SÉQ. 4 : LA COURSE --------------------------------------------------
+    { dur: 6500, img: "04_route_nuit.png",  kb: "kb",         label: "SÉQ.4 — LA COURSE · route de nuit, plan drone" },
+    { dur: 5500, img: "05_retroviseur.png", kb: "kb-reverse", label: "SÉQ.4 — LA COURSE · intérieur, regard rétroviseur" },
+
+    // --- SÉQ. 5 : LE CRASH ---------------------------------------------------
+    { dur: 2200, img: "06_crash_pov.png",   kb: "kb", cut: true, label: "SÉQ.5 — LE CRASH · vue subjective, phares du camion" },
+    { dur: 150,  flash: true },
+    { dur: 3000, blackout: true },   // les 3 secondes de noir — non négociables
+
+    // --- SÉQ. 6 : LE CONSTAT -------------------------------------------------
+    { dur: 5500, img: "07_fracasse.png",    kb: "kb",         label: "SÉQ.6 — LE CONSTAT · carcasse, gyrophares" },
+    { dur: 5000, img: "08_constat.png",     kb: "kb-reverse", label: "SÉQ.6 — LE CONSTAT · housse « THORNE, A. »" },
+    { dur: 3200, img: "08_constat.png",     hold: true,
+      card: { cls: "red", stamp: "DECEASED" } },
+
+    // --- SÉQ. 7 : LA SAISIE --------------------------------------------------
+    { dur: 5000, img: "09_evidence.png",    kb: "kb", cut: true,
+      card: { cls: "", main: "", sub: "DIGITAL FORENSICS — UNIT 7 · PIÈCE N°0043" },
+      label: "SÉQ.7 — LA SAISIE · labo, sac + laptop" },
+
+    // --- SÉQ. 8 : L'OUVERTURE ------------------------------------------------
+    { dur: 4200, img: "10_boot.png",        kb: "kb",         label: "SÉQ.8 — L'OUVERTURE · l'écran s'allume" },
+    { dur: 4200, card: { cls: "phosphor", main: "AUTHENTICATION REQUIRED_", sub: "" }, blackbg: true },
+    { dur: 3600, card: { cls: "red",      main: "LOCKDOWN IN 71:59:58", sub: "AUTO-LOCK PROTOCOL ARMED", countdown: true }, blackbg: true }
+    // → puis redirection vers le menu de boot
+  ];
+
+  // =================================================================
+  var stage      = document.getElementById("stage");
+  var card       = document.getElementById("card");
+  var whiteflash = document.getElementById("whiteflash");
+  var blackout   = document.getElementById("blackout");
+  var skipBtn    = document.getElementById("skip");
+
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var currentShot = null;
+  var timers = [];
+  var finished = false;
+
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+
+  function makeShot(step) {
+    var shot = document.createElement("div");
+    shot.className = "shot" + (step.kb && !reducedMotion ? " " + step.kb : "") + (step.cut ? " hardcut" : "");
+    if (step.img) {
+      var img = document.createElement("img");
+      img.src = ASSETS + step.img;
+      img.alt = "";
+      img.onerror = function () {
+        shot.removeChild(img);
+        var ph = document.createElement("div");
+        ph.className = "placeholder";
+        ph.innerHTML = '<div class="big">' + (step.label || step.img) + '</div>' +
+                       '<div class="small">image attendue : ' + ASSETS + step.img + '</div>';
+        shot.appendChild(ph);
+      };
+      shot.appendChild(img);
+    } else if (step.blackbg) {
+      shot.style.background = "#020403";
+    }
+    return shot;
+  }
+
+  function showCard(c) {
+    card.className = c.cls || "";
+    card.innerHTML = "";
+    if (c.bubble) {
+      var b = document.createElement("div");
+      b.className = "bubble";
+      card.appendChild(b);
+      if (c.typed && !reducedMotion) {
+        var i = 0, txt = c.bubble;
+        (function type() {
+          if (i <= txt.length) { b.textContent = txt.slice(0, i++); later(type, 65); }
+        })();
+      } else { b.textContent = c.bubble; }
+    }
+    if (c.stamp) {
+      var s = document.createElement("span");
+      s.className = "stamp";
+      s.textContent = c.stamp;
+      card.appendChild(s);
+    }
+    if (c.main) {
+      var m = document.createElement("div");
+      m.className = "main";
+      m.textContent = c.main;
+      card.appendChild(m);
+      if (c.countdown) startCardCountdown(m);
+    }
+    if (c.sub) {
+      var su = document.createElement("div");
+      su.className = "sub";
+      su.textContent = c.sub;
+      card.appendChild(su);
+    }
+    card.classList.add("on");
+  }
+
+  function hideCard() { card.classList.remove("on"); }
+
+  // Le compte à rebours démarre à 71:59:58 et tourne réellement.
+  function startCardCountdown(el) {
+    var remaining = 71 * 3600 + 59 * 60 + 58;
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function tick() {
+      var h = Math.floor(remaining / 3600),
+          m = Math.floor((remaining % 3600) / 60),
+          s = remaining % 60;
+      el.textContent = "LOCKDOWN IN " + pad(h) + ":" + pad(m) + ":" + pad(s);
+      remaining--;
+    }
+    tick();
+    timers.push(setInterval(tick, 1000));
+  }
+
+  function runStep(index) {
+    if (finished) return;
+    if (index >= TIMELINE.length) { endCinematic(); return; }
+    var step = TIMELINE[index];
+
+    hideCard();
+    blackout.classList.remove("on");
+
+    if (step.flash) {
+      whiteflash.classList.remove("fade");
+      whiteflash.classList.add("hit");
+      later(function () { whiteflash.classList.remove("hit"); whiteflash.classList.add("fade"); }, step.dur);
+    } else if (step.blackout) {
+      if (currentShot) { currentShot.classList.remove("on"); }
+      blackout.classList.add("on");
+    } else if (!step.hold) {
+      var shot = makeShot(step);
+      stage.insertBefore(shot, card);
+      // force reflow avant le fade-in
+      void shot.offsetWidth;
+      shot.classList.add("on");
+      if (currentShot) {
+        var old = currentShot;
+        if (step.cut) { old.classList.add("hardcut"); }
+        old.classList.remove("on");
+        later(function () { if (old.parentNode) old.parentNode.removeChild(old); }, 1400);
+      }
+      currentShot = shot;
+    }
+
+    if (step.card) later(function () { showCard(step.card); }, step.hold ? 100 : 500);
+
+    later(function () { runStep(index + 1); }, step.dur);
+  }
+
+  function endCinematic() {
+    if (finished) return;
+    finished = true;
+    timers.forEach(function (t) { clearTimeout(t); clearInterval(t); });
+    blackout.classList.add("on");
+    setTimeout(function () { window.location.href = MENU_URL; }, reducedMotion ? 250 : 900);
+  }
+
+  skipBtn.addEventListener("click", endCinematic);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") endCinematic();
+  });
+
+  runStep(0);
+})();
+</script>
+
+</body>
+</html>
