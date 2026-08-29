@@ -9,7 +9,7 @@
     --phosphor:  #33ff66;
     --alert-red: #ff4040;
     --paper:     #e8e6e0;
-    --c-a: #33ff66;   /* Aris (protagoniste)      -> vert phosphore  */
+    --c-a: #33ff66;   /* Le développeur           -> vert phosphore  */
     --c-b: #4fc3f7;   /* Agent forensique 1        -> bleu cyan      */
     --c-c: #ffb74d;   /* Agent forensique 2        -> ambre          */
     --c-d: #c792ea;   /* La responsable Division 7 -> violet         */
@@ -259,7 +259,7 @@
 (function () {
   "use strict";
 
-  var MENU_URL = "menu_boot_terminal.html";
+  var MENU_URL = "menu_boot_terminal_v11_mystere.html";
   var ASSETS = "assets/";
 
   // -------------------------------------------------------------
@@ -269,161 +269,217 @@
   // -------------------------------------------------------------
   var TIMELINE = [
     // === ACTE I — LE CALME ==============================================
-    { dur: 6600, img: "img1.png", kb: "kb",  music: "a-calme", fx: ["dust"],
+    { dur: 6100, img: "img1.png", kb: "kb", music: "a-calme", fx: ["dust"],
       label: "Matin doré, il s'étire avec son café",
       bubbles: [
-        { cls: "a", top: "10%", left: "48%", delay: 300,  hold: 1700, text: "♪ Mmh, mh-mh, mh~ ♪" },
-        { cls: "a", top: "10%", left: "48%", delay: 2100, hold: 1900, text: "Encore une matinée tranquille." },
-        { cls: "a", top: "10%", left: "48%", delay: 4200, hold: 2200, text: "Café, code, silence. Exactement comme je l'aime." }
+        { cls: "a", top: "10%", left: "48%", delay: 500,  hold: 1700, text: "♪ Mmh, mh-mh, mh~ ♪" },
+        { cls: "a", top: "10%", left: "48%", delay: 2700, hold: 1900, text: "Allez…" },
+        { cls: "a", top: "10%", left: "48%", delay: 4700, hold: 1200, text: "On finit ça." }
       ] },
-    { dur: 9000, img: "img2.png", kb: "kb-reverse", fx: ["dust"],
+    { dur: 7600, img: "img2.png", kb: "kb-reverse", fx: ["dust"],
       label: "Il code, souriant, lumière chaude",
       bubbles: [
-        { cls: "a", top: "18%", left: "48%", delay: 300,  hold: 1700, text: "♪ Ti-ti-doo, ti-doo~ ♪" },
-        { cls: "a", top: "18%", left: "48%", delay: 2100, hold: 1900, text: "Encore une belle journée…" },
-        { cls: "a", top: "18%", left: "48%", delay: 4200, hold: 2100, text: "Un petit commit, et je vais me faire un café." },
-        { cls: "a", top: "18%", left: "48%", delay: 6500, hold: 2200, text: "Personne ne sait ce que je fais vraiment ici." }
+        { cls: "a", top: "18%", left: "48%", delay: 600,  hold: 1600, text: "Voilà." },
+        { cls: "a", top: "18%", left: "48%", delay: 2600, hold: 1900, text: "Encore un commit…" },
+        { cls: "a", top: "18%", left: "48%", delay: 5000, hold: 1900, text: "…et café." }
       ] },
     { dur: 2600, img: "img3.gif", cut: true, label: "Carton : A FEW HOURS LATER..." },
-    { dur: 7200, img: "img4.png", kb: "kb", cut: true, fx: ["glow"],
+    { dur: 6500, img: "img4.png", kb: "kb", cut: true, fx: ["glow"],
       label: "Le soir, détendu devant l'écran",
       bubbles: [
-        { cls: "a", top: "18%", left: "38%", delay: 500,  hold: 1900, text: "Tiens… le virement est passé." },
-        { cls: "a", top: "18%", left: "38%", delay: 2600, hold: 1900, text: "Ni vu ni connu." },
-        { cls: "a", top: "18%", left: "38%", delay: 4700, hold: 2200, text: "Je devrais peut-être arrêter bientôt." }
+        { cls: "a", top: "18%", left: "38%", delay: 700,  hold: 1500, text: "Enfin." },
+        { cls: "a", top: "18%", left: "38%", delay: 2600, hold: 1900, text: "Journée terminée." },
+        { cls: "a", top: "18%", left: "38%", delay: 4800, hold: 1400, text: "Demain." }
       ] },
     { dur: 2600, img: "img5.gif", cut: true, label: "Carton : A FEW MOMENTS LATER..." },
 
-    // === ACTE II — LE DÉCLENCHEUR & LA FUITE ============================
+    // === ACTE II — LE MESSAGE & LA FUITE ================================
+    // Ici on conserve volontairement les répliques d'origine :
+    // la panique est claire, sa raison reste inconnue.
     { dur: 4400, img: "img6.png", kb: "kb-fast", cut: true, music: "a-tension", fx: ["glow"],
       sfx: [ { id: "s-notif", delay: 150 } ],
       label: "Le téléphone s'allume : THEY KNOW. LEAVE NOW.",
-      bubbles: [ { cls: "a", top: "14%", left: "8%", delay: 2600, hold: 1600, text: "Merde." } ] },
+      bubbles: [
+        { cls: "a", top: "14%", left: "8%", delay: 2600, hold: 1600, text: "Merde." }
+      ] },
     { dur: 7200, img: "img7.png", kb: "kb-reverse", cut: true,
       sfx: [ { id: "s-zip", delay: 5600 } ],
       label: "Panique, il fourre l'ordinateur dans son sac",
       bubbles: [
-        { cls: "a", top: "10%", left: "42%", delay: 300,  hold: 2100, typed: true, text: "Il faut partir. Maintenant." },
-        { cls: "a", top: "10%", left: "42%", delay: 2700, hold: 1900, text: "Le laptop. Le disque dur. Tout." },
-        { cls: "a", top: "10%", left: "42%", delay: 4900, hold: 2000, text: "Respire. Respire…" }
+        { cls: "a", top: "10%", left: "42%", delay: 500,  hold: 1500, text: "Le laptop." },
+        { cls: "a", top: "10%", left: "42%", delay: 2200, hold: 1500, text: "Le disque dur." },
+        { cls: "a", top: "10%", left: "42%", delay: 3900, hold: 1200, text: "Tout." },
+        { cls: "a", top: "10%", left: "42%", delay: 5400, hold: 1600, text: "Ok. Ok." }
       ] },
-    { dur: 6000, img: "img8.png", kb: "kb", cut: true, fx: ["rain"], ambient: "s-footsteps",
+    { dur: 6200, img: "img8.png", kb: "kb", cut: true, fx: ["rain"], ambient: "s-footsteps",
       label: "Il court sous la pluie vers la voiture",
       bubbles: [
-        { cls: "a", top: "12%", left: "30%", delay: 500,  hold: 1900, text: "La voiture. Juste la voiture." },
-        { cls: "a", top: "12%", left: "30%", delay: 2700, hold: 2100, text: "Vas-y, vas-y, vas-y—" }
+        { cls: "a", top: "12%", left: "30%", delay: 500,  hold: 1900, text: "Où est la voiture ?" },
+        { cls: "a", top: "12%", left: "30%", delay: 2700, hold: 1700, text: "Ah— elle est là." },
+        { cls: "a", top: "12%", left: "30%", delay: 4700, hold: 1300, text: "Allez, allez—" }
       ] },
 
     // === ACTE III — LA COURSE ============================================
     { dur: 5200, img: "img9.png", kb: "kb", cut: true, fx: ["rain"], ambient: null,
       label: "Route de nuit, plan large, la voiture file", music: "a-course" },
-    { dur: 6600, img: "img10.png", kb: "kb-reverse", fx: ["rain"],
+    { dur: 6000, img: "img10.png", kb: "kb-reverse", fx: ["rain"],
       label: "Intérieur voiture, visage effrayé",
       bubbles: [
-        { cls: "a", top: "8%",  left: "48%", delay: 400,  hold: 1900, text: "Allez… allez…" },
-        { cls: "a", top: "8%",  left: "48%", delay: 2600, hold: 2100, text: "Pourquoi il roule aussi lentement ?!" },
-        { cls: "a", top: "8%",  left: "48%", delay: 4900, hold: 1800, text: "Je dois juste… sortir de cette route." }
+        { cls: "a", top: "8%", left: "48%", delay: 700,  hold: 1800, text: "Allez…" },
+        { cls: "a", top: "8%", left: "48%", delay: 3200, hold: 2000, text: "Putain, roule !" }
       ] },
     { dur: 5600, img: "img11.png", kb: "kb", fx: ["rain"],
       sfx: [ { id: "s-klaxon", delay: 3900 } ],
       label: "Vue avant, rétroviseur, regard affolé",
       bubbles: [
-        { cls: "a", top: "6%", left: "76%", delay: 500,  hold: 2000, text: "Encore un peu. Juste encore un peu." },
-        { cls: "a", top: "6%", left: "76%", delay: 2800, hold: 1900, text: "Pourquoi il freine—" }
+        { cls: "a", top: "6%", left: "76%", delay: 700,  hold: 1800, text: "Encore un peu." },
+        { cls: "a", top: "6%", left: "76%", delay: 3000, hold: 2200, text: "Pourquoi il freine, ce con—" }
       ] },
 
     // === ACTE IV — LE CRASH ==============================================
     { dur: 1400, img: "img12.png", kb: "shake", cut: true, fx: ["shards"],
       label: "POV : le camion, les phares, le verre", music: "a-impact",
       sfx: [ { id: "s-glass", delay: 90 } ],
-      bubbles: [ { cls: "a", top: "40%", left: "40%", delay: 60, hold: 950, typed: true, text: "Non, non—" } ] },
-    { dur: 160,  flash: true },
+      bubbles: [
+        { cls: "a", top: "40%", left: "40%", delay: 60, hold: 950, typed: true, text: "AAAAH !" }
+      ] },
+    { dur: 160, flash: true },
     { dur: 2600, blackout: true },
 
     // === ACTE V — LE CONSTAT =============================================
-    { dur: 9200, img: "img13.png", kb: "kb", cut: true, music: "a-glas", fx: ["siren"], ambient: "s-siren",
+    { dur: 12400, img: "img13.png", kb: "kb", cut: true, music: "a-glas", fx: ["siren"], ambient: "s-siren",
       label: "La carcasse, police et ambulance sur place",
       bubbles: [
-        { cls: "b", top: "10%", left: "10%", delay: 900,  hold: 2000, text: "Un survivant ?" },
-        { cls: "c", top: "10%", left: "68%", delay: 3100, hold: 2100, text: "Négatif. Un corps sur place." },
-        { cls: "b", top: "10%", left: "10%", delay: 5400, hold: 1800, text: "Heure du décès ?" },
-        { cls: "c", top: "10%", left: "68%", delay: 7400, hold: 1700, text: "Constatée à 23h47." }
+        { cls: "b", top: "10%", left: "10%", delay: 700,  hold: 1800, text: "Un survivant ?" },
+        { cls: "c", top: "10%", left: "68%", delay: 2700, hold: 1900, text: "Le conducteur, négatif." },
+        { cls: "b", top: "10%", left: "10%", delay: 4800, hold: 1700, text: "Le poids lourd ?" },
+        { cls: "c", top: "10%", left: "68%", delay: 6700, hold: 2100, text: "Vivant. État critique." },
+        { cls: "b", top: "10%", left: "10%", delay: 9000, hold: 1600, text: "Il a parlé ?" },
+        { cls: "c", top: "10%", left: "68%", delay: 10800, hold: 1400, text: "Non." }
       ] },
-    { dur: 11200, img: "img14.png", kb: "kb-reverse", fx: ["siren"],
-      label: "La housse mortuaire « THORNE, A. »",
+    { dur: 12000, img: "img14.png", kb: "kb-reverse", fx: ["siren"],
+      label: "La housse mortuaire — identité inconnue",
       bubbles: [
-        { cls: "c", top: "8%",  left: "58%", delay: 700,  hold: 2200, text: "Thorne, A. Trente-deux ans." },
-        { cls: "b", top: "10%", left: "6%",  delay: 3100, hold: 2600, text: "Cause probable : collision frontale avec un poids lourd." },
-        { cls: "c", top: "8%",  left: "58%", delay: 5900, hold: 2300, text: "Chaussée mouillée, vitesse excessive. Classique." },
-        { cls: "b", top: "10%", left: "6%",  delay: 8400, hold: 2400, text: "Aucune trace de freinage avant l'impact." }
+        { cls: "b", top: "10%", left: "6%",  delay: 600,  hold: 1600, text: "Vitesse ?" },
+        { cls: "c", top: "8%",  left: "58%", delay: 2400, hold: 2300, text: "Excessive. Chaussée mouillée." },
+        { cls: "b", top: "10%", left: "6%",  delay: 5000, hold: 1600, text: "Freinage ?" },
+        { cls: "c", top: "8%",  left: "58%", delay: 6800, hold: 1800, text: "Rien de net." },
+        { cls: "b", top: "10%", left: "6%",  delay: 8800, hold: 1900, text: "On a une identité ?" },
+        { cls: "c", top: "8%",  left: "58%", delay: 10900, hold: 900, text: "Pas encore." }
       ] },
-    { dur: 3000, img: "img14.png", hold: true, fx: ["siren"],
+    { dur: 6200, img: "img14.png", kb: "kb", fx: ["siren"],
+      label: "Les effets personnels sont mis sous scellés",
+      bubbles: [
+        { cls: "b", top: "10%", left: "6%",  delay: 500,  hold: 1600, text: "Le téléphone ?" },
+        { cls: "c", top: "8%",  left: "58%", delay: 2300, hold: 1600, text: "Mort." },
+        { cls: "b", top: "10%", left: "6%",  delay: 4100, hold: 1700, text: "Le portable ?" },
+        { cls: "c", top: "8%",  left: "58%", delay: 5000, hold: 1000, text: "Il tient." }
+      ] },
+    { dur: 2800, img: "img14.png", hold: true, fx: ["siren"],
       card: { cls: "red", stamp: "DECEASED" } },
 
-    // === ACTE VI — LA SAISIE & LE LABO ===================================
-    { dur: 7500, img: "img15.png", kb: "kb", cut: true, music: "a-lab", ambient: "s-server",
+    // === ACTE VI — DIGITAL FORENSICS =====================================
+    { dur: 8500, img: "img15.png", kb: "kb", cut: true, music: "a-lab", ambient: "s-server",
       card: { cls: "", sub: "DIGITAL FORENSICS — UNIT 7 · PIÈCE N°0043" },
-      label: "Sac, laptop et mallette posés sur la paillasse",
+      label: "Le portable accidenté arrive au labo",
       bubbles: [
-        { cls: "b", top: "12%", left: "6%",  delay: 1200, hold: 2600, text: "Inventaire : un sac à dos, un ordinateur portable, une mallette scellée." },
-        { cls: "c", top: "10%", left: "62%", delay: 4200, hold: 2400, text: "Cette mallette scellée… bizarre, pour un simple développeur." }
+        { cls: "c", top: "10%", left: "62%", delay: 900,  hold: 1600, text: "Des nouvelles ?" },
+        { cls: "b", top: "12%", left: "6%",  delay: 2700, hold: 1700, text: "Il démarre." },
+        { cls: "e", top: "10%", left: "80%", delay: 4600, hold: 2100, text: "C'est déjà plus que le téléphone." },
+        { cls: "b", top: "12%", left: "6%",  delay: 6900, hold: 1300, text: "Le disque tient." }
       ] },
-    { dur: 4600, img: "img16.png", kb: "kb-reverse", fx: ["scan"],
+    { dur: 4700, img: "img16.png", kb: "kb-reverse", fx: ["scan"],
       sfx: [ { id: "s-radar", delay: 250 }, { id: "s-radar", delay: 2400 } ],
-      label: "Gros plan : ENCRYPTED VOLUME DETECTED" },
-    { dur: 38500, img: "img17.jpg", kb: "kb", cut: true, fx: ["scan"], ambient: "s-keyboard",
-      label: "L'équipe forensique découvre le contenu chiffré",
+      label: "Gros plan : ENCRYPTED VOLUME DETECTED",
       bubbles: [
-        { cls: "b", top: "8%",  left: "58%", delay: 300,   hold: 1900, text: "Chiffrement militaire. On n'entre pas comme ça." },
-        { cls: "c", top: "6%",  left: "26%", delay: 2300,  hold: 2000, text: "On a tout essayé : brute-force, dictionnaire, faille firmware… rien." },
-        { cls: "e", top: "10%", left: "80%", delay: 4400,  hold: 1800, text: "Même le CD de secours refuse de booter." },
-        { cls: "b", top: "8%",  left: "58%", delay: 6300,  hold: 1800, text: "Normal, c'est verrouillé au niveau du BIOS." },
-        { cls: "c", top: "6%",  left: "26%", delay: 8200,  hold: 2200, text: "Depuis quand un simple développeur a un BIOS verrouillé comme une centrale nucléaire ?" },
-        { cls: "e", top: "10%", left: "80%", delay: 10500, hold: 1900, text: "Depuis qu'il cachait visiblement un truc énorme." },
-        { cls: "b", top: "8%",  left: "58%", delay: 12500, hold: 2200, text: "Il va falloir passer par Linux. Ligne de commande. Open source, quoi." },
-        { cls: "c", top: "6%",  left: "26%", delay: 14800, hold: 1900, text: "Merci, on sait ce qu'est Linux, Dubois." },
-        { cls: "e", top: "10%", left: "80%", delay: 16800, hold: 1700, text: "Je dis ça pour ceux du fond." },
-        { cls: "b", top: "8%",  left: "58%", delay: 18600, hold: 1600, text: "Y'a pas de fond. On est trois." },
-        { cls: "e", top: "10%", left: "80%", delay: 20300, hold: 1700, text: "Je dis ça symboliquement." },
-        { cls: "c", top: "6%",  left: "26%", delay: 22100, hold: 1900, text: "Bon. On appelle l'expert du domaine." },
-        { cls: "b", top: "8%",  left: "58%", delay: 24100, hold: 2000, text: "Qui ça, « l'expert du domaine » ?" },
-        { cls: "c", top: "6%",  left: "26%", delay: 26200, hold: 2200, text: "Peu importe qui. Quelqu'un qui sait vraiment faire ça." },
-        { cls: "e", top: "10%", left: "80%", delay: 28500, hold: 2000, text: "Tant qu'il facture pas à l'heure, ça me va." },
-        { cls: "c", top: "6%",  left: "26%", delay: 30600, hold: 1900, text: "Je préviens le supérieur." },
-        { cls: "b", top: "8%",  left: "58%", delay: 32600, hold: 2000, text: "Dis-lui qu'on a essayé. Vraiment essayé." },
-        { cls: "e", top: "10%", left: "80%", delay: 34700, hold: 2400, text: "Dis-lui surtout qu'on veut du café frais après ça." }
+        { cls: "c", top: "7%", left: "60%", delay: 2500, hold: 1800, text: "Et on entre ?" }
+      ] },
+    { dur: 36500, img: "img17.jpg", kb: "kb", cut: true, fx: ["scan"], ambient: "s-keyboard",
+      label: "L'équipe forensique tente d'ouvrir le volume",
+      bubbles: [
+        { cls: "b", top: "8%",  left: "58%", delay: 300,   hold: 1200, text: "Non." },
+        { cls: "b", top: "8%",  left: "58%", delay: 1800,  hold: 2200, text: "LUKS. En-tête partiellement récupéré." },
+        { cls: "e", top: "10%", left: "80%", delay: 4300,  hold: 1700, text: "Mot de passe ?" },
+        { cls: "b", top: "8%",  left: "58%", delay: 6200,  hold: 2400, text: "Si c'était aussi simple, tu serais pas là." },
+        { cls: "e", top: "10%", left: "80%", delay: 8800,  hold: 2100, text: "Moi, j'étais là pour le café." },
+
+        { cls: "c", top: "6%",  left: "26%", delay: 11200, hold: 1500, text: "Brute-force." },
+        { cls: "b", top: "8%",  left: "58%", delay: 12900, hold: 1200, text: "Bloqué." },
+        { cls: "e", top: "10%", left: "80%", delay: 14300, hold: 1500, text: "Dictionnaire." },
+        { cls: "b", top: "8%",  left: "58%", delay: 16000, hold: 1200, text: "Bloqué." },
+        { cls: "c", top: "6%",  left: "26%", delay: 17400, hold: 1500, text: "Firmware." },
+        { cls: "b", top: "8%",  left: "58%", delay: 19100, hold: 1200, text: "Bloqué." },
+
+        { cls: "e", top: "10%", left: "80%", delay: 20700, hold: 2100, text: "Il a une réponse à tout." },
+        { cls: "b", top: "8%",  left: "58%", delay: 23100, hold: 2700, text: "Non. Il a juste prévu qu'on essaierait." },
+        { cls: "c", top: "6%",  left: "26%", delay: 26000, hold: 2100, text: "Tu peux passer autour ?" },
+        { cls: "b", top: "8%",  left: "58%", delay: 28300, hold: 2600, text: "Pas sans risquer de perdre le volume." },
+
+        { cls: "c", top: "6%",  left: "26%", delay: 31200, hold: 1800, text: "On appelle quelqu'un." },
+        { cls: "e", top: "10%", left: "80%", delay: 33200, hold: 1700, text: "Je déteste cette phrase." },
+        { cls: "b", top: "8%",  left: "58%", delay: 35000, hold: 1200, text: "J'ai un nom." }
       ] },
 
     // === ACTE VII — DIVISION 7 ===========================================
-    { dur: 58000, img: "img18.png", kb: "kb-reverse", cut: true, music: "a-division7", fx: ["holo"], ambient: null,
+    { dur: 64000, img: "img18.png", kb: "kb-reverse", cut: true, music: "a-division7", fx: ["holo"], ambient: null,
       label: "Bureau de la Division 7 — Opérations Clandestines",
       bubbles: [
-        { cls: "d", top: "6%",  left: "40%", delay: 300,   hold: 1900, text: "On m'a dit que vous étiez le meilleur dans votre domaine." },
-        { cls: "f", top: "62%", left: "18%", delay: 2300,  hold: 1800, text: "C'est ce qu'on raconte, oui." },
-        { cls: "d", top: "6%",  left: "40%", delay: 4200,  hold: 2800, text: "On a besoin de vous. Il a reçu un message : « Ils savent. Partez maintenant. » Il est mort dans l'heure." },
-        { cls: "f", top: "62%", left: "18%", delay: 7100,  hold: 1900, text: "Sympa, comme dernière notification." },
-        { cls: "f", top: "62%", left: "18%", delay: 9100,  hold: 2200, text: "Vous avez essayé de tracer le numéro qui a envoyé ce message ?" },
-        { cls: "d", top: "6%",  left: "40%", delay: 11400, hold: 2200, text: "Évidemment. Carte prépayée, relais anonyme. Rien d'exploitable." },
-        { cls: "f", top: "62%", left: "18%", delay: 13700, hold: 2000, text: "Je demandais juste, pour être sûr que vous aviez pensé à la base." },
-        { cls: "d", top: "6%",  left: "40%", delay: 15800, hold: 2000, text: "On y avait pensé avant même que vous arriviez." },
-        { cls: "d", top: "6%",  left: "40%", delay: 17900, hold: 2600, text: "Ce qu'on ignore, c'est pourquoi il a fui. Ce qu'il a emporté. Ce qu'il protégeait." },
-        { cls: "d", top: "6%",  left: "40%", delay: 20600, hold: 2300, text: "La réponse est peut-être dans son ordinateur. Tout est chiffré, système Linux." },
-        { cls: "f", top: "62%", left: "18%", delay: 23000, hold: 2300, text: "Donc vous voulez que je fouille là-dedans, discrètement, sans rien casser." },
-        { cls: "d", top: "6%",  left: "40%", delay: 25400, hold: 2300, text: "Exactement. Parcourez le système, l'open source, trouvez ce qu'il cachait." },
-        { cls: "f", top: "62%", left: "18%", delay: 27800, hold: 1700, text: "Et si je trouve rien ?" },
-        { cls: "d", top: "6%",  left: "40%", delay: 29600, hold: 2500, text: "Alors on saura qu'il n'y avait rien à trouver. Pour nous, c'est déjà une information." },
-        { cls: "f", top: "62%", left: "18%", delay: 32200, hold: 1900, text: "Pratique. Vous gagnez à tous les coups." },
-        { cls: "d", top: "6%",  left: "40%", delay: 34200, hold: 1900, text: "C'est le principe du renseignement, oui." },
-        { cls: "f", top: "62%", left: "18%", delay: 36200, hold: 1800, text: "Et moi je gagne quoi, dans l'histoire ?" },
-        { cls: "d", top: "6%",  left: "40%", delay: 38100, hold: 2300, text: "Le droit de tester vos exploits ailleurs qu'en cellule." },
-        { cls: "f", top: "62%", left: "18%", delay: 40500, hold: 1800, text: "Argument recevable." },
-        { cls: "d", top: "6%",  left: "40%", delay: 42400, hold: 2400, text: "On vous assigne une équipe de couverture. Nom de code : Lynx." },
-        { cls: "f", top: "62%", left: "18%", delay: 44900, hold: 2200, text: "J'ai un nom de code maintenant ? Je suis ému." },
-        { cls: "d", top: "6%",  left: "40%", delay: 47200, hold: 2600, text: "Ce n'est pas votre nom de code. C'est celui de l'équipe qui vous surveille." },
-        { cls: "f", top: "62%", left: "18%", delay: 49900, hold: 1900, text: "Ah. Beaucoup moins ému." },
-        { cls: "d", top: "6%",  left: "40%", delay: 51900, hold: 1900, text: "Alors ? Vous êtes in ou pas ?" },
-        { cls: "f", top: "62%", left: "18%", delay: 53900, hold: 2500, text: "Va pour un café correct… et j'en suis." }
+        { cls: "d", top: "6%",  left: "40%", delay: 300,   hold: 1600, text: "Vous êtes en retard." },
+        { cls: "f", top: "62%", left: "18%", delay: 2100,  hold: 1400, text: "Trois minutes." },
+        { cls: "d", top: "6%",  left: "40%", delay: 3700,  hold: 1100, text: "Quatre." },
+        { cls: "f", top: "62%", left: "18%", delay: 5000,  hold: 2500, text: "Je vois qu'on travaille avec des gens précis." },
+        { cls: "d", top: "6%",  left: "40%", delay: 7700,  hold: 2100, text: "C'est pour ça que vous êtes là." },
+
+        { cls: "d", top: "6%",  left: "40%", delay: 10200, hold: 2300, text: "Trois analystes. Deux jours. Aucun accès." },
+        { cls: "f", top: "62%", left: "18%", delay: 12800, hold: 2400, text: "Et vous pensez que j'aurai plus de chance." },
+        { cls: "d", top: "6%",  left: "40%", delay: 15500, hold: 3000, text: "Je pense que vous aurez moins de scrupules." },
+        { cls: "f", top: "62%", left: "18%", delay: 18800, hold: 2300, text: "Là, on commence à se comprendre." },
+
+        { cls: "d", top: "6%",  left: "40%", delay: 21400, hold: 2800, text: "L'ordinateur vient d'un accident mortel." },
+        { cls: "f", top: "62%", left: "18%", delay: 24500, hold: 2200, text: "Le propriétaire ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 27000, hold: 1800, text: "Non identifié." },
+        { cls: "f", top: "62%", left: "18%", delay: 29100, hold: 3000, text: "Vous me demandez d'ouvrir l'ordinateur d'un mort dont vous ignorez le nom." },
+        { cls: "d", top: "6%",  left: "40%", delay: 32400, hold: 1000, text: "Oui." },
+
+        { cls: "f", top: "62%", left: "18%", delay: 33800, hold: 2300, text: "Qu'est-ce que je cherche ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 36400, hold: 1300, text: "Je ne sais pas." },
+        { cls: "f", top: "62%", left: "18%", delay: 38000, hold: 1800, text: "Encore mieux." },
+        { cls: "d", top: "6%",  left: "40%", delay: 40100, hold: 2900, text: "Le volume se verrouille dans soixante-douze heures." },
+        { cls: "f", top: "62%", left: "18%", delay: 43300, hold: 3300, text: "Vous avez un talent pour garder le détail important pour la fin." },
+
+        { cls: "d", top: "6%",  left: "40%", delay: 46900, hold: 2700, text: "On vous assigne une équipe de couverture. Lynx." },
+        { cls: "f", top: "62%", left: "18%", delay: 49900, hold: 1700, text: "Pour m'aider ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 51900, hold: 1800, text: "Pour vous surveiller." },
+        { cls: "f", top: "62%", left: "18%", delay: 54000, hold: 2200, text: "Je préfère quand c'est clair." },
+
+        { cls: "d", top: "6%",  left: "40%", delay: 56500, hold: 3300, text: "Alors soyons clairs : vous ouvrez la machine. Vous ne copiez rien." },
+        { cls: "d", top: "6%",  left: "40%", delay: 60100, hold: 3000, text: "Et vous me dites ce que vous trouvez." }
       ] },
+
+    { dur: 12500, img: "img18.png", kb: "kb", fx: ["holo"],
+      label: "L'ordinateur est posé devant l'expert",
+      bubbles: [
+        { cls: "f", top: "62%", left: "18%", delay: 600,  hold: 1700, text: "Vous avez touché à quoi ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 2500, hold: 2700, text: "Assez pour savoir qu'il ne faut plus toucher." },
+        { cls: "f", top: "62%", left: "18%", delay: 5500, hold: 1400, text: "BIOS ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 7100, hold: 1200, text: "Verrouillé." },
+        { cls: "f", top: "62%", left: "18%", delay: 8500, hold: 1700, text: "Boot externe ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 10400, hold: 1400, text: "Bloqué." }
+      ] },
+    { dur: 7900, img: "img18.png", kb: "kb-reverse", fx: ["holo"],
+      label: "Le sourire de l'expert disparaît",
+      bubbles: [
+        { cls: "f", top: "62%", left: "18%", delay: 500,  hold: 1800, text: "Une clé ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 2500, hold: 1300, text: "Aucune." },
+        { cls: "f", top: "62%", left: "18%", delay: 4200, hold: 2200, text: "Qui a monté ça ?" },
+        { cls: "d", top: "6%",  left: "40%", delay: 6600, hold: 1100, text: "À vous de me le dire." }
+      ] },
+    { dur: 5600, img: "img18.png", kb: "kb", fx: ["holo"],
+      bubbles: [
+        { cls: "d", top: "6%",  left: "40%", delay: 500,  hold: 1800, text: "Soixante-douze heures." },
+        { cls: "f", top: "62%", left: "18%", delay: 2600, hold: 2500, text: "Très bien. On commence." }
+      ] },
+
     { dur: 3800, card: { cls: "violet", main: "DIVISION 7", sub: "OPÉRATIONS CLANDESTINES" }, blackbg: true }
     // → puis redirection vers le menu de boot
   ];
